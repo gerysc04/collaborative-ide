@@ -9,7 +9,7 @@ export default function Session() {
   const location = useLocation()
   const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
   const { editorRef, handleEditorMount } = useCollaboration(sessionId)
-  const { output, running, runCode } = useExecution(sessionId, editorRef)
+  const { output, running, error, runCode } = useExecution(sessionId, editorRef)
 
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href)
@@ -38,9 +38,13 @@ export default function Session() {
       <div className="session__terminal">
         <div className="session__terminal-header">output</div>
         <div className="session__terminal-output">
-          <pre className={output ? '' : 'session__terminal-output--muted'}>
-            {output || '// run your code to see output'}
-          </pre>
+          {error ? (
+            <pre style={{ color: '#ff4d4d' }}>{error}</pre>
+          ) : (
+            <pre className={output ? '' : 'session__terminal-output--muted'}>
+              {output || '// run your code to see output'}
+            </pre>
+          )}
         </div>
       </div>
     </div>
