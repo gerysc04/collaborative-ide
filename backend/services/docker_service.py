@@ -13,8 +13,7 @@ async def run_code(code: str) -> str:
         mem_limit="128m",
         cpu_period=100000,
         cpu_quota=50000,
-        network_disabled=True,
-        timeout=10
+        network_disabled=True
     ))
     
     return result.decode("utf-8")
