@@ -13,11 +13,13 @@ export default function Home() {
       method: 'POST'
     })
     const data = await res.json()
+    sessionStorage.setItem('username', username)
     navigate(`/session/${data.session_id}`, { state: { username } })
   }
 
   const joinSession = () => {
     if (!username || !sessionId) return
+    sessionStorage.setItem('username', username)
     navigate(`/session/${sessionId}`, { state: { username } })
   }
 

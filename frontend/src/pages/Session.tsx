@@ -7,7 +7,7 @@ import '../styles/Session.css'
 export default function Session() {
   const { sessionId } = useParams()
   const location = useLocation()
-  const username = location.state?.username || 'anonymous'
+  const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
   const { editorRef, handleEditorMount } = useCollaboration(sessionId)
   const { output, running, runCode } = useExecution(sessionId, editorRef)
 
@@ -23,6 +23,7 @@ export default function Session() {
           <span className="session__id">{sessionId}</span>
         </div>
         <div className="session__toolbar-right">
+          <span className="session__id">{username}</span>
           <button className="session__btn session__btn--share" onClick={copyLink}>
             Copy Link
           </button>
