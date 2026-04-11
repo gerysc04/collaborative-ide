@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routes.sessions import router as sessions_router
+from routes import router
 
 load_dotenv()
 
@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(sessions_router)
+app.include_router(router)
 
 @app.get("/")
 async def root():
