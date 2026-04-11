@@ -1,0 +1,115 @@
+.session {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+.session__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  height: 48px;
+  border-bottom: 1px solid var(--bg-border);
+  background: var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.session__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.session__logo {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.session__id {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.session__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.session__btn {
+  padding: 0.4rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.session__btn--run {
+  background: var(--accent);
+  color: #000;
+}
+
+.session__btn--run:hover {
+  opacity: 0.85;
+}
+
+.session__btn--run:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.session__btn--share {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--bg-border);
+}
+
+.session__btn--share:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.session__editor {
+  flex: 1;
+}
+
+.session__terminal {
+  height: 28vh;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--bg-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.session__terminal-header {
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.session__terminal-output {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.session__terminal-output--muted {
+  color: var(--text-muted);
+}

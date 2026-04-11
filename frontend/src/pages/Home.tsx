@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import '../styles/Home.css'
 
 export default function Home() {
   const [username, setUsername] = useState('')
@@ -12,34 +13,40 @@ export default function Home() {
       method: 'POST'
     })
     const data = await res.json()
-    navigate(`/session/${data.session_id}`)
+    navigate(`/session/${data.session_id}`, { state: { username } })
   }
 
   const joinSession = () => {
     if (!username || !sessionId) return
-    navigate(`/session/${sessionId}`)
+    navigate(`/session/${sessionId}`, { state: { username } })
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto' }}>
-      <h1>Collaborative IDE</h1>
-      <input
-        placeholder="Your username"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
-        style={{ display: 'block', width: '100%', marginBottom: '1rem', padding: '0.5rem' }}
-      />
-      <button onClick={createSession} style={{ marginRight: '1rem' }}>
-        Create Session
-      </button>
-      <hr style={{ margin: '1rem 0' }} />
-      <input
-        placeholder="Session ID to join"
-        value={sessionId}
-        onChange={e => setSessionId(e.target.value)}
-        style={{ display: 'block', width: '100%', marginBottom: '1rem', padding: '0.5rem' }}
-      />
-      <button onClick={joinSession}>Join Session</button>
+    <div className="home">
+      <p className="home__logo">Collide</p>
+      <div className="home__card">
+        <h1 className="home__title">Start coding<br />together.</h1>
+        <p className="home__subtitle">// real-time collaborative IDE</p>
+        <input
+          className="home__input"
+          placeholder="your username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+        />
+        <button className="home__btn home__btn--primary" onClick={createSession}>
+          Create Session
+        </button>
+        <div className="home__divider">or join existing</div>
+        <input
+          className="home__input"
+          placeholder="session id"
+          value={sessionId}
+          onChange={e => setSessionId(e.target.value)}
+        />
+        <button className="home__btn home__btn--secondary" onClick={joinSession}>
+          Join Session
+        </button>
+      </div>
     </div>
   )
 }
