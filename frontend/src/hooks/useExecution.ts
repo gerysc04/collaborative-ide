@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 export function useExecution(sessionId: string | undefined, editorRef: React.RefObject<any>) {
   const [output, setOutput] = useState('')
@@ -6,38 +6,33 @@ export function useExecution(sessionId: string | undefined, editorRef: React.Ref
   const [error, setError] = useState('')
   const wsRef = useRef<WebSocket | null>(null)
 
-  useEffect(() => {
-    wsRef.current = new WebSocket(`ws://localhost:8000/ws/execute/${sessionId}`)
-    
-    wsRef.current.onmessage = (event) => {
-      setOutput(event.data)
-      setRunning(false)
-      setError('')
+  const runCode = () => {
+    setRunning(true)
+    setOutput('')
+    setError('')
+
+    const ws = new WebSocket(`ws://localhost:8000/ws/execute/${sessionId}`)
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      const code = editorRef.current?.getValue() || ''
+      ws.send(code)
     }
 
-    wsRef.current.onerror = () => {
+    ws.onmessage = (event) => {
+      setOutput(event.data)
+      setRunning(false)
+      ws.close()
+    }
+
+    ws.onerror = () => {
       setError('Connection error — could not reach execution server')
       setRunning(false)
     }
 
-    wsRef.current.onclose = () => {
-      setError('Connection closed unexpectedly')
+    ws.onclose = () => {
       setRunning(false)
     }
-
-    return () => wsRef.current?.close()
-  }, [sessionId])
-
-  const runCode = () => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      setError('Not connected to execution server')
-      return
-    }
-    const code = editorRef.current?.getValue() || ''
-    setRunning(true)
-    setOutput('')
-    setError('')
-    wsRef.current.send(code)
   }
 
   return { output, running, error, runCode }
