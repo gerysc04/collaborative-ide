@@ -13,7 +13,7 @@ export default function Session() {
   const location = useLocation()
   const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
   const { editorRef, handleEditorMount } = useCollaboration(sessionId)
-  const { output, running, error, runCode } = useExecution(sessionId, editorRef)
+  const { running, error, runCode } = useExecution(sessionId, editorRef)
 
   const copyLink = () => {
     navigator.clipboard.writeText(window.location.href)
