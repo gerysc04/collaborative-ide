@@ -52,9 +52,8 @@ export default function Session() {
               </Panel>
 
               <PanelResizeHandle className="resize-handle resize-handle--horizontal" />
-
               <Panel defaultSize={35} minSize={15}>
-                <TerminalPanel />
+                <TerminalPanel sessionId={sessionId} />
               </Panel>
             </PanelGroup>
           </Panel>
