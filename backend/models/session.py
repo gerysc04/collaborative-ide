@@ -10,3 +10,6 @@ class Session(BaseModel):
     collaborators: list[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     container_id: Optional[str] = None
+    repo_url: Optional[str] = None
+    github_username: Optional[str] = None
+    ports: list[dict] = []

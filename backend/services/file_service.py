@@ -3,15 +3,21 @@ import traceback
 from fastapi import WebSocket
 from helpers.docker_helpers import exec_in_container, exec_socket_in_container
 
+_PRUNE_DIRS = [
+    "*/node_modules/*", "*/.git/*", "*/.next/*", "*/__pycache__/*",
+    "*/.venv/*", "*/venv/*", "*/.env/*", "*/dist/*", "*/build/*",
+    "*/.cache/*", "*/.turbo/*",
+]
+
+def _find_args(path: str, type_flag: str) -> list:
+    args = ["find", path, "-type", type_flag]
+    for pat in _PRUNE_DIRS:
+        args += ["-not", "-path", pat]
+    return args
+
 async def get_file_tree(container_id: str) -> dict:
-    _, dirs_output = await exec_in_container(
-        container_id,
-        ["find", "/app", "-type", "d", "-not", "-path", "*/node_modules/*", "-not", "-path", "*/.git/*"]
-    )
-    _, files_output = await exec_in_container(
-        container_id,
-        ["find", "/app", "-type", "f", "-not", "-path", "*/node_modules/*", "-not", "-path", "*/.git/*"]
-    )
+    _, dirs_output = await exec_in_container(container_id, _find_args("/app", "d"))
+    _, files_output = await exec_in_container(container_id, _find_args("/app", "f"))
 
     dirs = set(dirs_output.decode("utf-8").strip().split("\n")) if dirs_output else set()
     files_raw = files_output.decode("utf-8").strip() if files_output else ""
@@ -30,7 +36,7 @@ def parse_file_tree(dirs: set, files_raw: str) -> dict:
         all_paths.append((f, "file"))
 
     for path, node_type in sorted(all_paths):
-        parts = path.replace("/app/", "").split("/")
+        parts = path[len("/app/"):].split("/")
         current = root
 
         for i, part in enumerate(parts):
@@ -80,8 +86,12 @@ async def watch_files(websocket: WebSocket, container_id: str):
     try:
         sock = await exec_socket_in_container(
             container_id,
-            ["inotifywait", "-m", "-r", "-e", "create,delete,modify,move",
-             "--format", "%e %w%f", "/app"],
+            [
+                "inotifywait", "-m", "-r", "-e", "create,delete,modify,move",
+                "--format", "%e %w%f",
+                "--exclude", r"\.(git|next|cache|turbo)|node_modules|__pycache__|\.venv|/venv/|/dist/|/build/",
+                "/app",
+            ],
             tty=False
         )
 

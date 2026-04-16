@@ -27,9 +27,9 @@ def create_container(session_id: str) -> str:
         command="/bin/sh",
         stdin_open=True,
         tty=True,
-        mem_limit="512m",
+        mem_limit="1g",
         cpu_period=100000,
-        cpu_quota=50000,
+        cpu_quota=200000,  # 2 CPU cores
         name=f"collide-{session_id}",
         labels={"collide_session": session_id}
     )

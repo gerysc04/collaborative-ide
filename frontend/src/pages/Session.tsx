@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import { useCollaboration } from '../hooks/useCollaboration'
 import { useExecution } from '../hooks/useExecution'
@@ -8,6 +8,7 @@ import EditorTabs from '../components/EditorTabs'
 import FileTree from '../components/FileTree'
 import Chat from '../components/Chat'
 import TerminalPanel from '../components/TerminalPanel'
+import PortsPanel from '../components/PortsPanel'
 import { API_URL } from '../config'
 import '../styles/Session.css'
 
@@ -30,6 +31,30 @@ export default function Session() {
   const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
   const { editorRef, handleEditorMount, switchFile } = useCollaboration(sessionId)
   const { running, error, runCode } = useExecution(sessionId, editorRef)
+
+  const [repoName, setRepoName] = useState<string>(location.state?.repo_full_name ?? '')
+  const [codeCopied, setCodeCopied] = useState(false)
+  const [showPorts, setShowPorts] = useState(false)
+
+  useEffect(() => {
+    if (repoName || !sessionId) return
+    fetch(`${API_URL}/sessions/${sessionId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.repo_url) {
+          const parts = data.repo_url.replace('.git', '').split('/')
+          setRepoName(parts.slice(-2).join('/'))
+        }
+      })
+      .catch(() => {})
+  }, [sessionId, repoName])
+
+  const copySessionCode = () => {
+    if (!sessionId) return
+    navigator.clipboard.writeText(sessionId)
+    setCodeCopied(true)
+    setTimeout(() => setCodeCopied(false), 1500)
+  }
 
   const [openFiles, setOpenFiles] = useState<string[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
@@ -109,25 +134,37 @@ export default function Session() {
   }, [handleFileSelect, editorRef])
   closeTabRef.current = handleTabClose
 
-  const copyLink = () => navigator.clipboard.writeText(window.location.href)
-
   return (
     <div className="session">
       <div className="session__toolbar">
         <div className="session__toolbar-left">
           <span className="session__logo">Collide</span>
-          <span className="session__id">{sessionId}</span>
+          {repoName && <span className="session__repo">{repoName}</span>}
         </div>
         <div className="session__toolbar-right">
           <span className="session__id">{username}</span>
-          <button className="session__btn session__btn--share" onClick={copyLink}>
-            Copy Link
+          <span
+            className="session__code"
+            onClick={copySessionCode}
+            title="Click to copy session code"
+          >
+            session code: <span className="session__code-value">{codeCopied ? 'copied!' : sessionId}</span>
+          </span>
+          <button
+            className={`session__btn session__btn--ports${showPorts ? ' session__btn--ports-active' : ''}`}
+            onClick={() => setShowPorts(p => !p)}
+          >
+            Ports
           </button>
           <button className="session__btn session__btn--run" onClick={runCode} disabled={running}>
             {running ? 'Running...' : '▶ Run'}
           </button>
         </div>
       </div>
+
+      {showPorts && (
+        <PortsPanel sessionId={sessionId} onClose={() => setShowPorts(false)} />
+      )}
 
       <div className="session__body">
         <PanelGroup direction="horizontal" style={{ height: '100%' }}>

@@ -38,6 +38,33 @@
   color: var(--text-muted);
 }
 
+.session__repo {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.session__code {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px 8px;
+  border: 1px solid var(--bg-border);
+  border-radius: 3px;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.session__code:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.session__code-value {
+  color: var(--accent);
+}
+
 .session__toolbar-right {
   display: flex;
   align-items: center;
@@ -115,4 +142,187 @@
 .session__body > div {
   width: 100%;
   height: 100%;
+}
+
+.session__btn--ports {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--bg-border);
+}
+
+.session__btn--ports:hover,
+.session__btn--ports-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Ports panel */
+.ports-panel {
+  position: fixed;
+  top: 48px;
+  right: 0;
+  width: 380px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-border);
+  border-top: none;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.ports-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.ports-panel__title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ports-panel__close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.ports-panel__close:hover {
+  color: var(--text);
+}
+
+.ports-panel__body {
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-border) transparent;
+}
+
+.ports-panel__empty {
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  margin: 0;
+}
+
+.ports-panel__entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.ports-panel__entry:last-child {
+  border-bottom: none;
+}
+
+.ports-panel__entry-info {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ports-panel__entry-label {
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.ports-panel__entry-port {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+
+.ports-panel__entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ports-panel__action {
+  background: none;
+  border: 1px solid var(--bg-border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  text-decoration: none;
+  border-radius: 2px;
+  transition: border-color 0.15s, color 0.15s;
+  display: inline-block;
+}
+
+.ports-panel__action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ports-panel__action--remove:hover {
+  border-color: #ff4d4d;
+  color: #ff4d4d;
+}
+
+.ports-panel__footer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--bg-border);
+}
+
+.ports-panel__input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--bg-border);
+  color: var(--text);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  outline: none;
+  font-family: var(--font-mono);
+  min-width: 0;
+}
+
+.ports-panel__input--port {
+  flex: 0 0 72px;
+  width: 72px;
+}
+
+.ports-panel__input:focus {
+  border-color: var(--accent);
+}
+
+.ports-panel__btn-add {
+  background: var(--accent);
+  border: none;
+  color: #000;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.ports-panel__btn-add:hover {
+  opacity: 0.85;
+}
+
+.ports-panel__error {
+  padding: 0 1rem 0.6rem;
+  color: #ff4d4d;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  margin: 0;
 }

@@ -103,3 +103,72 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.home__btn--github {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--bg-border);
+}
+
+.home__btn--github:hover {
+  border-color: #6e5494;
+  color: #9b8bc4;
+}
+
+.home__repo-list {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--bg-border);
+  margin-bottom: 0.75rem;
+  background: var(--bg);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-border) transparent;
+}
+
+.home__repo-empty {
+  padding: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.home__repo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--bg-border);
+  transition: background 0.1s;
+  border-left: 2px solid transparent;
+}
+
+.home__repo-item:last-child {
+  border-bottom: none;
+}
+
+.home__repo-item:hover {
+  background: var(--bg-elevated);
+}
+
+.home__repo-item--selected {
+  background: var(--accent-dim) !important;
+  border-left-color: var(--accent);
+}
+
+.home__repo-name {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text);
+}
+
+.home__repo-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  border: 1px solid var(--bg-border);
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
