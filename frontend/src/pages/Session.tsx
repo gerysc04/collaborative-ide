@@ -164,7 +164,7 @@ export default function Session() {
           <PanelResizeHandle className="resize-handle resize-handle--vertical" />
 
           <Panel defaultSize={25} minSize={20} maxSize={35}>
-            <Chat />
+            <Chat sessionId={sessionId} username={username} />
           </Panel>
         </PanelGroup>
       </div>
