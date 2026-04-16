@@ -1,13 +1,14 @@
 import { useParams, useLocation } from 'react-router-dom'
-import { API_URL } from '../config'
 import { useState, useRef, useCallback } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import { useCollaboration } from '../hooks/useCollaboration'
 import { useExecution } from '../hooks/useExecution'
 import CodeEditor from '../components/CodeEditor'
+import EditorTabs from '../components/EditorTabs'
 import FileTree from '../components/FileTree'
 import Chat from '../components/Chat'
 import TerminalPanel from '../components/TerminalPanel'
+import { API_URL } from '../config'
 import '../styles/Session.css'
 
 const EXT_LANGUAGE: Record<string, string> = {
@@ -27,28 +28,39 @@ export default function Session() {
   const { sessionId } = useParams()
   const location = useLocation()
   const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
-  const { editorRef, monacoRef, handleEditorMount } = useCollaboration(sessionId)
+  const { editorRef, handleEditorMount, switchFile } = useCollaboration(sessionId)
   const { running, error, runCode } = useExecution(sessionId, editorRef)
 
-  const [selectedFile, setSelectedFile] = useState<string | undefined>(undefined)
-  const selectedFileRef = useRef<string | undefined>(undefined)
+  const [openFiles, setOpenFiles] = useState<string[]>([])
+  const [activeFile, setActiveFile] = useState<string | null>(null)
+  const activeFileRef = useRef<string | null>(null)
+  const openFilesRef = useRef<string[]>([])
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeTabRef = useRef<(path: string) => void>(() => {})
 
   const handleEditorMountWithSave = useCallback((editor: any, monaco: any) => {
     handleEditorMount(editor, monaco)
 
+    // Intercept Ctrl+W inside Monaco before the browser sees it
+    editor.onKeyDown((e: any) => {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyW') {
+        e.preventDefault()
+        e.stopPropagation()
+        if (activeFileRef.current) closeTabRef.current(activeFileRef.current)
+      }
+    })
+
     editor.onDidChangeModelContent(() => {
-      if (!selectedFileRef.current) return
+      if (!activeFileRef.current) return
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      const path = selectedFileRef.current
+      const path = activeFileRef.current
       saveTimeoutRef.current = setTimeout(async () => {
-        const content = editor.getValue()
         await fetch(
           `${API_URL}/sessions/${sessionId}/files/content?path=${encodeURIComponent(path)}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content }),
+            body: JSON.stringify({ content: editor.getValue() }),
           }
         )
       }, 800)
@@ -56,29 +68,48 @@ export default function Session() {
   }, [handleEditorMount, sessionId])
 
   const handleFileSelect = useCallback(async (path: string) => {
-    setSelectedFile(path)
-    selectedFileRef.current = path
+    setOpenFiles(prev => {
+      const next = prev.includes(path) ? prev : [...prev, path]
+      openFilesRef.current = next
+      return next
+    })
+    setActiveFile(path)
+    activeFileRef.current = path
 
     try {
       const res = await fetch(
         `${API_URL}/sessions/${sessionId}/files/content?path=${encodeURIComponent(path)}`
       )
       const data = await res.json()
-      if (editorRef.current) {
-        editorRef.current.setValue(data.content ?? '')
-      }
-      if (monacoRef.current && editorRef.current) {
-        const model = editorRef.current.getModel()
-        if (model) monacoRef.current.editor.setModelLanguage(model, detectLanguage(path))
-      }
+      switchFile(path, data.content ?? '', detectLanguage(path))
+      editorRef.current?.focus()
     } catch (e) {
       console.error('Failed to load file:', e)
     }
-  }, [sessionId, editorRef, monacoRef])
+  }, [sessionId, switchFile, editorRef])
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(window.location.href)
-  }
+  const handleTabClose = useCallback((path: string) => {
+    const current = openFilesRef.current
+    const idx = current.indexOf(path)
+    const next = current.filter(p => p !== path)
+
+    setOpenFiles(next)
+    openFilesRef.current = next
+
+    if (activeFileRef.current === path) {
+      const nextActive = next[idx] ?? next[idx - 1] ?? null
+      if (nextActive) {
+        handleFileSelect(nextActive)
+      } else {
+        setActiveFile(null)
+        activeFileRef.current = null
+        editorRef.current?.setValue('')
+      }
+    }
+  }, [handleFileSelect, editorRef])
+  closeTabRef.current = handleTabClose
+
+  const copyLink = () => navigator.clipboard.writeText(window.location.href)
 
   return (
     <div className="session">
@@ -104,23 +135,30 @@ export default function Session() {
             <FileTree
               sessionId={sessionId}
               onFileSelect={handleFileSelect}
-              selectedFile={selectedFile}
+              selectedFile={activeFile ?? undefined}
             />
           </Panel>
 
           <PanelResizeHandle className="resize-handle resize-handle--vertical" />
 
           <Panel defaultSize={55} minSize={30}>
-            <PanelGroup direction="vertical" style={{ height: '100%' }}>
-              <Panel defaultSize={65} minSize={30}>
-                <CodeEditor onMount={handleEditorMountWithSave} />
-              </Panel>
-
-              <PanelResizeHandle className="resize-handle resize-handle--horizontal" />
-              <Panel defaultSize={35} minSize={15}>
-                <TerminalPanel sessionId={sessionId} />
-              </Panel>
-            </PanelGroup>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <EditorTabs
+                tabs={openFiles}
+                activeFile={activeFile}
+                onSelect={handleFileSelect}
+                onClose={handleTabClose}
+              />
+              <PanelGroup direction="vertical" style={{ flex: 1, minHeight: 0 }}>
+                <Panel defaultSize={65} minSize={30}>
+                  <CodeEditor onMount={handleEditorMountWithSave} />
+                </Panel>
+                <PanelResizeHandle className="resize-handle resize-handle--horizontal" />
+                <Panel defaultSize={35} minSize={15}>
+                  <TerminalPanel sessionId={sessionId} />
+                </Panel>
+              </PanelGroup>
+            </div>
           </Panel>
 
           <PanelResizeHandle className="resize-handle resize-handle--vertical" />

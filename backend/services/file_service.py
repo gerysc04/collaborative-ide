@@ -54,6 +54,15 @@ def parse_file_tree(dirs: set, files_raw: str) -> dict:
 
     return root
 
+async def create_file_or_dir(container_id: str, path: str, node_type: str) -> None:
+    from pathlib import PurePosixPath
+    if node_type == 'directory':
+        await exec_in_container(container_id, ["mkdir", "-p", path])
+    else:
+        parent = str(PurePosixPath(path).parent)
+        await exec_in_container(container_id, ["mkdir", "-p", parent])
+        await exec_in_container(container_id, ["touch", path])
+
 async def get_file_content(container_id: str, path: str) -> str:
     _, output = await exec_in_container(container_id, ["cat", path])
     return output.decode("utf-8") if output else ""
