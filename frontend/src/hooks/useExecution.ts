@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { API_WS_URL } from '../config'
 
 export function useExecution(sessionId: string | undefined, editorRef: React.RefObject<any>) {
   const [output, setOutput] = useState('')
@@ -11,7 +12,7 @@ export function useExecution(sessionId: string | undefined, editorRef: React.Ref
     setOutput('')
     setError('')
 
-    const ws = new WebSocket(`ws://localhost:8000/ws/execute/${sessionId}`)
+    const ws = new WebSocket(`${API_WS_URL}/ws/execute/${sessionId}`)
     wsRef.current = ws
 
     ws.onopen = () => {

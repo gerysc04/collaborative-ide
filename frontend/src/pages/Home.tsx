@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_URL } from '../config'
 import '../styles/Home.css'
 
 export default function Home() {
@@ -11,7 +12,7 @@ export default function Home() {
   const createSession = async () => {
     if (!username) return setError('Please enter a username')
     try {
-      const res = await fetch(`http://localhost:8000/sessions?username=${username}&session_name=My Session`, {
+      const res = await fetch(`${API_URL}/sessions?username=${username}&session_name=My Session`, {
         method: 'POST'
       })
       const data = await res.json()
@@ -26,7 +27,7 @@ export default function Home() {
     if (!username) return setError('Please enter a username')
     if (!sessionId) return setError('Please enter a session ID')
     try {
-      const res = await fetch(`http://localhost:8000/sessions/${sessionId}`)
+      const res = await fetch(`${API_URL}/sessions/${sessionId}`)
       const data = await res.json()
       if (data.error) return setError('Session not found')
       sessionStorage.setItem('username', username)

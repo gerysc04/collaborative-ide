@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { API_WS_URL } from '../config'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -33,7 +34,7 @@ export default function TerminalPanel({ sessionId }: Props) {
     fitAddon.fit()
     xtermRef.current = term
 
-    const ws = new WebSocket(`ws://localhost:8000/ws/terminal/${sessionId}`)
+    const ws = new WebSocket(`${API_WS_URL}/ws/terminal/${sessionId}`)
     ws.binaryType = 'arraybuffer'
     wsRef.current = ws
 
