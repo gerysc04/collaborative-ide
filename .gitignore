@@ -1,7 +1,7 @@
 # Python
 backend/venv/
-__pycache__/
-*.pyc
+**/__pycache__/
+**/*.pyc
 .env
 
 # Node
