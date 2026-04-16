@@ -1,7 +1,7 @@
 import Editor from '@monaco-editor/react'
 
 interface Props {
-  onMount: (editor: any) => void
+  onMount: (editor: any, monaco: any) => void
 }
 
 export default function CodeEditor({ onMount }: Props) {

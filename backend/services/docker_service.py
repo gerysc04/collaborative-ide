@@ -1,15 +1,16 @@
-import docker
 import asyncio
 import traceback
+import docker
 from fastapi import WebSocket
+from helpers.docker_helpers import exec_socket_in_container
 
 client = docker.from_env()
 
 async def run_code(code: str) -> str:
     loop = asyncio.get_event_loop()
-    
+
     result = await loop.run_in_executor(None, lambda: client.containers.run(
-        "node:alpine",
+        "collide-node",
         ["node", "-e", code],
         remove=True,
         mem_limit="128m",
@@ -17,12 +18,12 @@ async def run_code(code: str) -> str:
         cpu_quota=50000,
         network_disabled=True
     ))
-    
+
     return result.decode("utf-8")
 
 def create_container(session_id: str) -> str:
     container = client.containers.create(
-        "node:alpine",
+        "collide-node",
         command="/bin/sh",
         stdin_open=True,
         tty=True,
@@ -33,29 +34,14 @@ def create_container(session_id: str) -> str:
         labels={"collide_session": session_id}
     )
     container.start()
+    container.exec_run(["mkdir", "-p", "/app"])
     return container.id
+
 async def attach_terminal(websocket: WebSocket, container_id: str):
-    loop = asyncio.get_event_loop()
-    
     try:
-        container = client.containers.get(container_id)
+        sock = await exec_socket_in_container(container_id, ["/bin/sh"])
 
-        exec_id = client.api.exec_create(
-            container.id,
-            "/bin/sh",
-            stdin=True,
-            tty=True
-        )
-
-        sock = client.api.exec_start(
-            exec_id,
-            detach=False,
-            tty=True,
-            socket=True
-        )
-
-        # Keep blocking mode so recv waits for data
-        sock._sock.setblocking(True)
+        loop = asyncio.get_event_loop()
 
         async def read_from_container():
             while True:

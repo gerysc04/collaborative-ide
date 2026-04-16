@@ -1,15 +1,18 @@
 import { useRef } from 'react'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
+import { COLLAB_WS_URL } from '../config'
 
 export function useCollaboration(sessionId: string | undefined) {
   const editorRef = useRef<any>(null)
+  const monacoRef = useRef<any>(null)
 
-  const handleEditorMount = (editor: any) => {
+  const handleEditorMount = (editor: any, monaco: any) => {
     editorRef.current = editor
+    monacoRef.current = monaco
 
     const ydoc = new Y.Doc()
-    const provider = new WebsocketProvider('ws://localhost:1234', sessionId!, ydoc)
+    const provider = new WebsocketProvider(COLLAB_WS_URL, sessionId!, ydoc)
     const ytext = ydoc.getText('monaco')
 
     ytext.observe(() => {
@@ -36,5 +39,5 @@ export function useCollaboration(sessionId: string | undefined) {
     }
   }
 
-  return { editorRef, handleEditorMount }
+  return { editorRef, monacoRef, handleEditorMount }
 }
