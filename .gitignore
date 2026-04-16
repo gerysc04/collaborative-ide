@@ -10,3 +10,7 @@ node_modules/
 
 # General
 .DS_Store
+
+#Claude
+.claudeignore
+CLAUDE.md

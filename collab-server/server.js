@@ -9,6 +9,7 @@ wss.on('connection', (ws, req) => {
   setupWSConnection(ws, req)
 })
 
-server.listen(1234, () => {
-  console.log('Collab server running on port 1234')
+const PORT = process.env.PORT || 1234
+server.listen(PORT, () => {
+  console.log(`Collab server running on port ${PORT}`)
 })

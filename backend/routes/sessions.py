@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter
 from models.session import Session
 from services.mongo_service import sessions_collection
@@ -8,8 +9,8 @@ router = APIRouter()
 @router.post("/sessions")
 async def create_session(username: str, session_name: str):
     session = Session(name=session_name, owner=username)
-    
-    loop = __import__('asyncio').get_event_loop()
+
+    loop = asyncio.get_event_loop()
     container_id = await loop.run_in_executor(None, create_container, session.id)
     
     session.container_id = container_id
