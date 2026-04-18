@@ -20,6 +20,7 @@ export default function Home() {
   const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null)
   const [loadingRepos, setLoadingRepos] = useState(false)
 
+  const [dbType, setDbType] = useState<string>('none')
   const [sessionId, setSessionId] = useState('')
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
@@ -54,6 +55,7 @@ export default function Home() {
           github_token: githubToken,
           repo_url: selectedRepo.clone_url,
           repo_full_name: selectedRepo.full_name,
+          db_type: dbType === 'none' ? null : dbType,
         }),
       })
       const data = await res.json()
@@ -168,6 +170,23 @@ export default function Home() {
               </div>
             ))
           )}
+        </div>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: '0.4rem' }}>
+            database
+          </label>
+          <select
+            className="home__input"
+            value={dbType}
+            onChange={e => setDbType(e.target.value)}
+            style={{ cursor: 'pointer' }}
+          >
+            <option value="none">none</option>
+            <option value="postgresql">PostgreSQL</option>
+            <option value="mongodb">MongoDB</option>
+            <option value="redis">Redis</option>
+          </select>
         </div>
 
         <button

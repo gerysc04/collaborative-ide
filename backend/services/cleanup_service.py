@@ -18,16 +18,24 @@ def _remove_container(container_id: str) -> None:
         container.remove(force=True)
         logger.info(f"Removed container {container_id}")
     except docker.errors.NotFound:
-        pass  # already gone
+        pass
     except Exception as e:
         logger.warning(f"Failed to remove container {container_id}: {e}")
 
 
+def _remove_network(network_name: str) -> None:
+    try:
+        network = docker_client.networks.get(network_name)
+        network.remove()
+        logger.info(f"Removed network {network_name}")
+    except docker.errors.NotFound:
+        pass
+    except Exception as e:
+        logger.warning(f"Failed to remove network {network_name}: {e}")
+
+
 async def cleanup_old_sessions() -> None:
     cutoff = datetime.now(timezone.utc) - timedelta(hours=SESSION_MAX_AGE_HOURS)
-
-    # MongoDB stores created_at as a naive UTC datetime from datetime.utcnow()
-    # so compare against naive cutoff as well
     cutoff_naive = cutoff.replace(tzinfo=None)
 
     expired = await sessions_collection.find(
@@ -44,6 +52,14 @@ async def cleanup_old_sessions() -> None:
         container_id = session.get("container_id")
         if container_id:
             await loop.run_in_executor(None, _remove_container, container_id)
+
+        db_container_id = session.get("db_container_id")
+        if db_container_id:
+            await loop.run_in_executor(None, _remove_container, db_container_id)
+
+        network_name = session.get("network_name")
+        if network_name:
+            await loop.run_in_executor(None, _remove_network, network_name)
 
     ids = [s["id"] for s in expired]
     await sessions_collection.delete_many({"id": {"$in": ids}})
