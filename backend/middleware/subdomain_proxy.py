@@ -9,10 +9,8 @@ import websockets
 logger = logging.getLogger(__name__)
 docker_client = docker.from_env()
 
-# Matches {uuid}-{port}.anything  e.g. "abc123-3000.lvh.me:8000"
-SUBDOMAIN_RE = re.compile(
-    r'^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(\d+)\.'
-)
+# Matches {8-char-hex}-{port}.anything  e.g. "72ea3b8c-3000.lvh.me:8000"
+SUBDOMAIN_RE = re.compile(r'^([0-9a-f]{8})-(\d+)\.')
 
 
 def _get_container_ip(container_id: str) -> str:
@@ -67,9 +65,10 @@ class SubdomainProxyMiddleware:
         else:
             await self._proxy_ws(scope, receive, send, session_id, port)
 
-    async def _resolve(self, session_id: str) -> str:
+    async def _resolve(self, short_id: str) -> str:
         from services.mongo_service import sessions_collection
-        session = await sessions_collection.find_one({"id": session_id})
+        # short_id is first 8 chars of the full UUID
+        session = await sessions_collection.find_one({"id": {"$regex": f"^{short_id}"}})
         if not session:
             raise ValueError("Session not found")
         loop = asyncio.get_event_loop()
@@ -102,7 +101,7 @@ class SubdomainProxyMiddleware:
         req_headers = [
             (k.decode(), v.decode())
             for k, v in scope["headers"]
-            if k.lower() not in (b"host", b"content-length", b"transfer-encoding")
+            if k.lower() not in (b"host", b"content-length", b"transfer-encoding", b"origin", b"referer")
         ]
 
         timeout = httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=10.0)
