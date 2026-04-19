@@ -1,10 +1,13 @@
+import base64
 from typing import Optional, Literal
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, UploadFile, File, Form, Query
+from fastapi.responses import Response, JSONResponse
 from pathlib import PurePosixPath
 from pydantic import BaseModel
 from services.file_service import get_file_tree, get_file_content, write_file_content, create_file_or_dir, watch_files
 from services.mongo_service import sessions_collection
 from services import connection_tracker
+from helpers.docker_helpers import exec_in_container
 
 router = APIRouter()
 
@@ -74,6 +77,47 @@ async def create_node(session_id: str, path: str, body: CreateNodeRequest, branc
         return {"error": "No container for this branch"}
     await create_file_or_dir(container_id, path, body.type)
     return {"success": True}
+
+@router.post("/sessions/{session_id}/files/upload")
+async def upload_file(
+    session_id: str,
+    path: str = Form(...),
+    file: UploadFile = File(...),
+    branch: Optional[str] = Query(None),
+):
+    if not _safe_path(path):
+        return JSONResponse(status_code=400, content={"error": "Invalid path"})
+    session = await sessions_collection.find_one({"id": session_id})
+    if not session:
+        return JSONResponse(status_code=404, content={"error": "Session not found"})
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        return JSONResponse(status_code=404, content={"error": "No container for this branch"})
+
+    content_bytes = await file.read()
+    encoded = base64.b64encode(content_bytes).decode("ascii")
+    parent = str(PurePosixPath(path).parent)
+    await exec_in_container(container_id, ["mkdir", "-p", parent])
+    await exec_in_container(container_id, ["sh", "-c", f"echo '{encoded}' | base64 -d > {path}"])
+    return {"success": True}
+
+
+@router.get("/sessions/{session_id}/files/download")
+async def download_project(session_id: str, branch: Optional[str] = None):
+    session = await sessions_collection.find_one({"id": session_id})
+    if not session:
+        return JSONResponse(status_code=404, content={"error": "Session not found"})
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        return JSONResponse(status_code=404, content={"error": "No container for this branch"})
+
+    _, data = await exec_in_container(container_id, ["tar", "czf", "-", "-C", "/app", "."])
+    return Response(
+        content=data,
+        media_type="application/gzip",
+        headers={"Content-Disposition": "attachment; filename=project.tar.gz"},
+    )
+
 
 @router.websocket("/ws/files/{session_id}")
 async def file_watcher(websocket: WebSocket, session_id: str, branch: Optional[str] = None):
