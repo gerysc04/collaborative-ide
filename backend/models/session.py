@@ -20,3 +20,4 @@ class Session(BaseModel):
     repo_url: Optional[str] = None
     github_username: Optional[str] = None
     ports: list[dict] = []
+    ai_providers: list[dict] = []  # {tag, provider, display_name, key_ciphertext, key_iv}

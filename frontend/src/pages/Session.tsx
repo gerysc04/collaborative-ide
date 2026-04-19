@@ -9,6 +9,7 @@ import FileTree from '../components/FileTree'
 import Chat from '../components/Chat'
 import TerminalPanel from '../components/TerminalPanel'
 import PortsPanel from '../components/PortsPanel'
+import ProvidersPanel from '../components/ProvidersPanel'
 import BranchSwitcher from '../components/BranchSwitcher'
 import { API_URL } from '../config'
 import '../styles/Session.css'
@@ -37,6 +38,7 @@ export default function Session() {
   const currentBranchRef = useRef<string>('main')
   const [codeCopied, setCodeCopied] = useState(false)
   const [showPorts, setShowPorts] = useState(false)
+  const [showProviders, setShowProviders] = useState(false)
   const [isResuming, setIsResuming] = useState(false)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
   const [chatCollapsed, setChatCollapsed] = useState(false)
@@ -199,8 +201,14 @@ export default function Session() {
             session code: <span className="session__code-value">{codeCopied ? 'copied!' : sessionId}</span>
           </span>
           <button
+            className={`session__btn session__btn--ports${showProviders ? ' session__btn--ports-active' : ''}`}
+            onClick={() => { setShowProviders(p => !p); setShowPorts(false) }}
+          >
+            AI
+          </button>
+          <button
             className={`session__btn session__btn--ports${showPorts ? ' session__btn--ports-active' : ''}`}
-            onClick={() => setShowPorts(p => !p)}
+            onClick={() => { setShowPorts(p => !p); setShowProviders(false) }}
           >
             Ports
           </button>
@@ -209,6 +217,10 @@ export default function Session() {
 
       {showPorts && (
         <PortsPanel sessionId={sessionId} onClose={() => setShowPorts(false)} />
+      )}
+
+      {showProviders && (
+        <ProvidersPanel sessionId={sessionId} onClose={() => setShowProviders(false)} />
       )}
 
       {isResuming && (
@@ -286,7 +298,7 @@ export default function Session() {
           </PanelResizeHandle>
 
           <Panel ref={chatPanelRef} defaultSize={25} minSize={20} maxSize={35} collapsible collapsedSize={0} onCollapse={() => setChatCollapsed(true)} onExpand={() => setChatCollapsed(false)}>
-            <Chat sessionId={sessionId} username={username} isCollapsed={chatCollapsed} onToggle={toggleChat} />
+            <Chat sessionId={sessionId} username={username} currentBranch={currentBranch} isCollapsed={chatCollapsed} onToggle={toggleChat} />
           </Panel>
         </PanelGroup>
       </div>
