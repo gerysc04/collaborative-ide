@@ -8,6 +8,7 @@ from routes.ports import router as ports_router
 from routes.ai_providers import router as ai_providers_router
 from routes.ai import router as ai_router
 from routes.run_configs import router as run_configs_router
+from routes.stats import router as stats_router
 
 router = APIRouter()
 
@@ -20,3 +21,4 @@ router.include_router(ports_router)
 router.include_router(ai_providers_router)
 router.include_router(ai_router)
 router.include_router(run_configs_router)
+router.include_router(stats_router)

@@ -14,6 +14,7 @@ import BranchSwitcher from '../components/BranchSwitcher'
 import PresenceAvatars from '../components/PresenceAvatars'
 import FilePalette from '../components/FilePalette'
 import RunPanel from '../components/RunPanel'
+import ResourceUsage from '../components/ResourceUsage'
 import { API_URL } from '../config'
 import '../styles/Session.css'
 
@@ -211,6 +212,7 @@ export default function Session() {
           />
         </div>
         <div className="session__toolbar-right">
+          <ResourceUsage sessionId={sessionId} currentBranch={currentBranch} />
           <PresenceAvatars users={onlineUsers} />
           <span className="session__id">{username}</span>
           <span
