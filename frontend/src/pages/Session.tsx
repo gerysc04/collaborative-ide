@@ -37,6 +37,7 @@ export default function Session() {
   const currentBranchRef = useRef<string>('main')
   const [codeCopied, setCodeCopied] = useState(false)
   const [showPorts, setShowPorts] = useState(false)
+  const [isResuming, setIsResuming] = useState(false)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
   const [chatCollapsed, setChatCollapsed] = useState(false)
   const fileTreePanelRef = useRef<ImperativePanelHandle>(null)
@@ -56,7 +57,7 @@ export default function Session() {
     if (!sessionId) return
     fetch(`${API_URL}/sessions/${sessionId}`)
       .then(r => r.json())
-      .then(data => {
+      .then(async data => {
         if (data.repo_url && !repoName) {
           const parts = data.repo_url.replace('.git', '').split('/')
           setRepoName(parts.slice(-2).join('/'))
@@ -64,6 +65,14 @@ export default function Session() {
         const branch = data.default_branch || 'main'
         setCurrentBranch(branch)
         currentBranchRef.current = branch
+
+        if (data.status === 'stopped') {
+          setIsResuming(true)
+          try {
+            await fetch(`${API_URL}/sessions/${sessionId}/resume`, { method: 'POST' })
+          } catch (_) {}
+          setIsResuming(false)
+        }
       })
       .catch(() => {})
   }, [sessionId])
@@ -200,6 +209,23 @@ export default function Session() {
 
       {showPorts && (
         <PortsPanel sessionId={sessionId} onClose={() => setShowPorts(false)} />
+      )}
+
+      {isResuming && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999,
+          background: 'rgba(0,0,0,0.75)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: '0.75rem',
+        }}>
+          <span style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
+            resuming session...
+          </span>
+          <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.72rem' }}>
+            restoring containers from snapshot
+          </span>
+        </div>
       )}
 
       <div className="session__body">

@@ -4,6 +4,7 @@ from pathlib import PurePosixPath
 from pydantic import BaseModel
 from services.file_service import get_file_tree, get_file_content, write_file_content, create_file_or_dir, watch_files
 from services.mongo_service import sessions_collection
+from services import connection_tracker
 
 router = APIRouter()
 
@@ -85,4 +86,10 @@ async def file_watcher(websocket: WebSocket, session_id: str, branch: Optional[s
     if not container_id:
         await websocket.close()
         return
-    await watch_files(websocket, container_id)
+
+    ws_id = id(websocket)
+    connection_tracker.connect(session_id, ws_id)
+    try:
+        await watch_files(websocket, container_id)
+    finally:
+        connection_tracker.disconnect(session_id, ws_id)

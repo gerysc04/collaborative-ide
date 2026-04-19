@@ -85,6 +85,57 @@ def create_branch_container(session_id: str, branch: str, network_name: str) -> 
     return container.id
 
 
+def ensure_network(network_name: str) -> None:
+    try:
+        client.networks.get(network_name)
+    except docker.errors.NotFound:
+        client.networks.create(network_name, driver="bridge")
+
+
+def snapshot_container(container_id: str, image_name: str) -> None:
+    container = client.containers.get(container_id)
+    container.commit(repository=image_name, tag="latest")
+
+
+def stop_and_remove_container(container_id: str) -> None:
+    try:
+        container = client.containers.get(container_id)
+        container.stop(timeout=10)
+        container.remove()
+    except docker.errors.NotFound:
+        pass
+
+
+def restore_db_container_from_snapshot(session_id: str, network_name: str, image_name: str) -> str:
+    container = client.containers.create(
+        image_name,
+        name=f"collide-db-{session_id}",
+        hostname="db",
+        network=network_name,
+        labels={"collide_session": session_id, "collide_role": "db"}
+    )
+    container.start()
+    return container.id
+
+
+def restore_container_from_snapshot(session_id: str, branch: str, network_name: str, image_name: str) -> str:
+    safe = _safe_branch(branch)
+    container = client.containers.create(
+        image_name,
+        command="/bin/bash",
+        stdin_open=True,
+        tty=True,
+        mem_limit="1g",
+        cpu_period=100000,
+        cpu_quota=200000,
+        name=f"collide-{session_id}-{safe}",
+        network=network_name,
+        labels={"collide_session": session_id, "collide_role": "app", "collide_branch": branch}
+    )
+    container.start()
+    return container.id
+
+
 def create_db_container(session_id: str, db_type: str, network_name: str) -> str:
     image, env = DB_IMAGES[db_type]
     try:

@@ -9,6 +9,7 @@ from services.docker_service import (
     create_session_network, create_container, rename_container_for_branch,
     create_branch_container, create_db_container, DB_IMAGES
 )
+from services.session_lifecycle import restore_session
 from helpers.docker_helpers import exec_in_container
 
 docker_client = docker.from_env()
@@ -118,6 +119,19 @@ async def get_session(session_id: str):
         return {"error": "Session not found"}
     session.pop("_id")
     return session
+
+
+@router.post("/sessions/{session_id}/resume")
+async def resume_session(session_id: str):
+    session = await sessions_collection.find_one({"id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.get("status") == "running":
+        return {"status": "running"}
+    ok = await restore_session(session_id)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to restore session")
+    return {"status": "running"}
 
 
 @router.get("/sessions/{session_id}/branches")

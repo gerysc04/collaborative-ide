@@ -1,9 +1,11 @@
 from typing import Optional
 from fastapi import APIRouter, WebSocket
-from services.docker_service import run_code, attach_terminal
+from services.docker_service import attach_terminal
 from services.mongo_service import sessions_collection
+from services import connection_tracker
 
 router = APIRouter()
+
 
 def _resolve_container(session: dict, branch: Optional[str]) -> Optional[str]:
     containers = session.get("containers", {})
@@ -14,18 +16,6 @@ def _resolve_container(session: dict, branch: Optional[str]) -> Optional[str]:
         container_id = session.get("container_id")
     return container_id
 
-@router.websocket("/ws/execute/{session_id}")
-async def execute_code(websocket: WebSocket, session_id: str):
-    await websocket.accept()
-
-    try:
-        while True:
-            code = await websocket.receive_text()
-            output = await run_code(code)
-            await websocket.send_text(output)
-    except Exception as e:
-        await websocket.send_text(f"Error: {str(e)}")
-        await websocket.close()
 
 @router.websocket("/ws/terminal/{session_id}")
 async def terminal(websocket: WebSocket, session_id: str, branch: Optional[str] = None):
@@ -41,7 +31,9 @@ async def terminal(websocket: WebSocket, session_id: str, branch: Optional[str] 
         await websocket.close()
         return
 
+    ws_id = id(websocket)
+    connection_tracker.connect(session_id, ws_id)
     try:
         await attach_terminal(websocket, container_id)
-    except Exception:
-        await websocket.close()
+    finally:
+        connection_tracker.disconnect(session_id, ws_id)

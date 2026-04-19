@@ -8,7 +8,7 @@ from services.mongo_service import sessions_collection
 logger = logging.getLogger(__name__)
 docker_client = docker.from_env()
 
-SESSION_MAX_AGE_HOURS = int(os.getenv("SESSION_MAX_AGE_HOURS", "24"))
+SESSION_MAX_AGE_HOURS = int(os.getenv("SESSION_MAX_AGE_HOURS", "720"))  # 30 days
 CLEANUP_INTERVAL_SECONDS = 3600  # run every hour
 
 
@@ -39,7 +39,7 @@ async def cleanup_old_sessions() -> None:
     cutoff_naive = cutoff.replace(tzinfo=None)
 
     expired = await sessions_collection.find(
-        {"created_at": {"$lt": cutoff_naive}}
+        {"created_at": {"$lt": cutoff_naive}, "status": "stopped"}
     ).to_list(length=None)
 
     if not expired:
