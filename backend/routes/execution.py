@@ -3,6 +3,7 @@ from fastapi import APIRouter, WebSocket
 from services.docker_service import attach_terminal
 from services.mongo_service import sessions_collection
 from services import connection_tracker
+from services.shared_terminal_service import shared_terminal_manager
 
 router = APIRouter()
 
@@ -37,3 +38,24 @@ async def terminal(websocket: WebSocket, session_id: str, branch: Optional[str] 
         await attach_terminal(websocket, container_id)
     finally:
         connection_tracker.disconnect(session_id, ws_id)
+
+
+@router.get("/sessions/{session_id}/terminals/shared")
+async def list_shared_terminals(session_id: str):
+    return {"terminals": shared_terminal_manager.list_terminals(session_id)}
+
+
+@router.websocket("/ws/terminal/{session_id}/shared/{name}")
+async def shared_terminal(
+    websocket: WebSocket, session_id: str, name: str, branch: Optional[str] = None
+):
+    await websocket.accept()
+    session = await sessions_collection.find_one({"id": session_id})
+    if not session:
+        await websocket.close()
+        return
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        await websocket.close()
+        return
+    await shared_terminal_manager.connect(session_id, name, container_id, websocket)

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
-import { API_WS_URL } from '../config'
+import { API_URL, API_WS_URL } from '../config'
 
 // ─── Single terminal pane ──────────────────────────────────────────────────────
 
@@ -10,9 +10,10 @@ interface PaneProps {
   sessionId: string
   currentBranch: string
   active: boolean
+  sharedName?: string  // if set, connects to the shared PTY endpoint
 }
 
-function TerminalPane({ sessionId, currentBranch, active }: PaneProps) {
+function TerminalPane({ sessionId, currentBranch, active, sharedName }: PaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
@@ -37,10 +38,16 @@ function TerminalPane({ sessionId, currentBranch, active }: PaneProps) {
     term.open(containerRef.current)
     fitAddon.fit()
 
-    const ws = new WebSocket(`${API_WS_URL}/ws/terminal/${sessionId}?branch=${encodeURIComponent(currentBranch)}`)
+    const wsUrl = sharedName
+      ? `${API_WS_URL}/ws/terminal/${sessionId}/shared/${encodeURIComponent(sharedName)}?branch=${encodeURIComponent(currentBranch)}`
+      : `${API_WS_URL}/ws/terminal/${sessionId}?branch=${encodeURIComponent(currentBranch)}`
+
+    const ws = new WebSocket(wsUrl)
     ws.binaryType = 'arraybuffer'
 
-    ws.onopen = () => term.write('\r\n\x1b[32mConnected\x1b[0m\r\n')
+    ws.onopen = () => {
+      if (!sharedName) term.write('\r\n\x1b[32mConnected\x1b[0m\r\n')
+    }
     ws.onmessage = (e) => term.write(new Uint8Array(e.data))
     ws.onerror = () => term.write('\r\n\x1b[31mConnection error\x1b[0m\r\n')
     ws.onclose = () => term.write('\r\n\x1b[31mDisconnected\x1b[0m\r\n')
@@ -57,9 +64,8 @@ function TerminalPane({ sessionId, currentBranch, active }: PaneProps) {
       ws.close()
       term.dispose()
     }
-  }, [sessionId, currentBranch])
+  }, [sessionId, currentBranch, sharedName])
 
-  // Re-fit when this pane becomes visible
   useEffect(() => {
     if (active) setTimeout(() => fitAddonRef.current?.fit(), 0)
   }, [active])
@@ -81,7 +87,10 @@ function TerminalPane({ sessionId, currentBranch, active }: PaneProps) {
 
 // ─── Tab bar + multi-terminal manager ─────────────────────────────────────────
 
-interface Tab { id: number }
+interface Tab {
+  id: number
+  sharedName?: string  // undefined = private, string = shared terminal name
+}
 
 interface Props {
   sessionId: string | undefined
@@ -92,10 +101,49 @@ export default function TerminalPanel({ sessionId, currentBranch }: Props) {
   const nextId = useRef(2)
   const [tabs, setTabs] = useState<Tab[]>([{ id: 1 }])
   const [activeId, setActiveId] = useState(1)
+  const knownSharedRef = useRef<Set<string>>(new Set())
+
+  // Poll for shared terminals created by other users
+  useEffect(() => {
+    if (!sessionId) return
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_URL}/sessions/${sessionId}/terminals/shared`)
+        const data = await res.json()
+        const names: string[] = data.terminals ?? []
+        const newNames = names.filter(n => !knownSharedRef.current.has(n))
+        if (newNames.length > 0) {
+          setTabs(prev => {
+            const next = [...prev]
+            for (const name of newNames) {
+              if (!knownSharedRef.current.has(name)) {
+                knownSharedRef.current.add(name)
+                const id = nextId.current++
+                next.push({ id, sharedName: name })
+              }
+            }
+            return next
+          })
+        }
+      } catch {
+        // ignore poll errors
+      }
+    }
+    const interval = setInterval(poll, 5000)
+    return () => clearInterval(interval)
+  }, [sessionId])
 
   const addTab = () => {
     const id = nextId.current++
     setTabs(prev => [...prev, { id }])
+    setActiveId(id)
+  }
+
+  const shareTerminal = () => {
+    const name = `shared-${Date.now()}`
+    knownSharedRef.current.add(name)
+    const id = nextId.current++
+    setTabs(prev => [...prev, { id, sharedName: name }])
     setActiveId(id)
   }
 
@@ -122,8 +170,11 @@ export default function TerminalPanel({ sessionId, currentBranch }: Props) {
         overflowX: 'auto',
         scrollbarWidth: 'none',
       }}>
-        {tabs.map(tab => {
+        {tabs.map((tab, i) => {
           const active = tab.id === activeId
+          const label = tab.sharedName
+            ? `🔗 ${tab.sharedName.replace('shared-', 'shared ')}`
+            : `bash ${i + 1}`
           return (
             <div
               key={tab.id}
@@ -136,15 +187,15 @@ export default function TerminalPanel({ sessionId, currentBranch }: Props) {
                 cursor: 'pointer',
                 flexShrink: 0,
                 borderRight: '1px solid #1a1a1a',
-                borderTop: `2px solid ${active ? '#00ff94' : 'transparent'}`,
+                borderTop: `2px solid ${active ? (tab.sharedName ? '#00e5ff' : '#00ff94') : 'transparent'}`,
                 background: active ? '#111111' : 'transparent',
-                color: active ? '#e8e8e8' : '#555',
+                color: active ? (tab.sharedName ? '#00e5ff' : '#e8e8e8') : '#555',
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: '0.72rem',
               }}
               onClick={() => setActiveId(tab.id)}
             >
-              <span>bash {tab.id}</span>
+              <span>{label}</span>
               {tabs.length > 1 && (
                 <span
                   style={{ opacity: 0.4, fontSize: '1rem', lineHeight: 1, padding: '0 1px' }}
@@ -158,24 +209,25 @@ export default function TerminalPanel({ sessionId, currentBranch }: Props) {
             </div>
           )
         })}
+
         <button
           onClick={addTab}
-          title="New terminal"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#555',
-            cursor: 'pointer',
-            fontSize: '1.1rem',
-            padding: '0 10px',
-            height: '30px',
-            lineHeight: 1,
-            flexShrink: 0,
-          }}
+          title="New private terminal"
+          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '1.1rem', padding: '0 10px', height: '30px', lineHeight: 1, flexShrink: 0 }}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#00ff94'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#555'}
         >
           +
+        </button>
+
+        <button
+          onClick={shareTerminal}
+          title="New shared terminal (visible to all users)"
+          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '0.75rem', padding: '0 8px', height: '30px', lineHeight: 1, flexShrink: 0, fontFamily: 'JetBrains Mono, monospace' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#00e5ff'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#555'}
+        >
+          🔗
         </button>
       </div>
 
@@ -187,6 +239,7 @@ export default function TerminalPanel({ sessionId, currentBranch }: Props) {
             sessionId={sessionId}
             currentBranch={currentBranch}
             active={tab.id === activeId}
+            sharedName={tab.sharedName}
           />
         ))}
       </div>
