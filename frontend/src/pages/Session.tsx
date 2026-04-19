@@ -11,6 +11,7 @@ import TerminalPanel from '../components/TerminalPanel'
 import PortsPanel from '../components/PortsPanel'
 import ProvidersPanel from '../components/ProvidersPanel'
 import BranchSwitcher from '../components/BranchSwitcher'
+import PresenceAvatars from '../components/PresenceAvatars'
 import { API_URL } from '../config'
 import '../styles/Session.css'
 
@@ -32,7 +33,7 @@ export default function Session() {
   const location = useLocation()
   const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
   const githubToken = sessionStorage.getItem('github_token') ?? ''
-  const { editorRef, handleEditorMount, switchFile, setAwarenessBranch, closeFile, providerRef } = useCollaboration(sessionId, username)
+  const { editorRef, handleEditorMount, switchFile, setAwarenessBranch, closeFile, providerRef, onlineUsers } = useCollaboration(sessionId, username)
   const [repoName, setRepoName] = useState<string>(location.state?.repo_full_name ?? '')
   const [currentBranch, setCurrentBranch] = useState<string>('main')
   const currentBranchRef = useRef<string>('main')
@@ -193,6 +194,7 @@ export default function Session() {
           />
         </div>
         <div className="session__toolbar-right">
+          <PresenceAvatars users={onlineUsers} />
           <span className="session__id">{username}</span>
           <span
             className="session__code"

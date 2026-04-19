@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { COLLAB_WS_URL } from '../config'
@@ -33,9 +33,15 @@ interface FileEntry {
   ytext: Y.Text
 }
 
+export interface OnlineUser {
+  username: string
+  branch: string
+}
+
 export function useCollaboration(sessionId: string | undefined, username: string) {
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<any>(null)
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
 
   // Session-level provider — awareness only, no file content
   const providerRef = useRef<WebsocketProvider | null>(null)
@@ -163,7 +169,20 @@ export function useCollaboration(sessionId: string | undefined, username: string
     provider.awareness.setLocalStateField('username', username)
     provider.awareness.setLocalStateField('branch', 'main')
     provider.awareness.setLocalStateField('cursor', null)
+    const updatePresence = () => {
+      const states = provider.awareness.getStates()
+      const localId = provider.awareness.clientID
+      const users: OnlineUser[] = []
+      states.forEach((state: any, clientId: number) => {
+        if (clientId !== localId && state.username) {
+          users.push({ username: state.username, branch: state.branch ?? 'main' })
+        }
+      })
+      setOnlineUsers(users)
+    }
+
     provider.awareness.on('change', renderRemoteCursors)
+    provider.awareness.on('change', updatePresence)
   }
 
   const getOrCreateFileProvider = (path: string, branch: string): FileEntry => {
@@ -274,5 +293,5 @@ export function useCollaboration(sessionId: string | undefined, username: string
     }
   }, [])
 
-  return { editorRef, monacoRef, handleEditorMount, switchFile, setAwarenessBranch, closeFile, providerRef }
+  return { editorRef, monacoRef, handleEditorMount, switchFile, setAwarenessBranch, closeFile, providerRef, onlineUsers }
 }
