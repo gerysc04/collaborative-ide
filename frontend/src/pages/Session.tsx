@@ -13,6 +13,7 @@ import ProvidersPanel from '../components/ProvidersPanel'
 import BranchSwitcher from '../components/BranchSwitcher'
 import PresenceAvatars from '../components/PresenceAvatars'
 import FilePalette from '../components/FilePalette'
+import RunPanel from '../components/RunPanel'
 import { API_URL } from '../config'
 import '../styles/Session.css'
 
@@ -42,6 +43,8 @@ export default function Session() {
   const [showPorts, setShowPorts] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
   const [showPalette, setShowPalette] = useState(false)
+  const [showRun, setShowRun] = useState(false)
+  const [pendingRun, setPendingRun] = useState<{ command: string; ts: number } | null>(null)
   const [isResuming, setIsResuming] = useState(false)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
   const [chatCollapsed, setChatCollapsed] = useState(false)
@@ -218,8 +221,14 @@ export default function Session() {
             session code: <span className="session__code-value">{codeCopied ? 'copied!' : sessionId}</span>
           </span>
           <button
+            className={`session__btn session__btn--ports${showRun ? ' session__btn--ports-active' : ''}`}
+            onClick={() => { setShowRun(p => !p); setShowPorts(false); setShowProviders(false) }}
+          >
+            ▶ Run
+          </button>
+          <button
             className={`session__btn session__btn--ports${showProviders ? ' session__btn--ports-active' : ''}`}
-            onClick={() => { setShowProviders(p => !p); setShowPorts(false) }}
+            onClick={() => { setShowProviders(p => !p); setShowPorts(false); setShowRun(false) }}
           >
             AI
           </button>
@@ -234,6 +243,14 @@ export default function Session() {
 
       {showPorts && (
         <PortsPanel sessionId={sessionId} onClose={() => setShowPorts(false)} />
+      )}
+
+      {showRun && (
+        <RunPanel
+          sessionId={sessionId}
+          onClose={() => setShowRun(false)}
+          onRun={command => setPendingRun({ command, ts: Date.now() })}
+        />
       )}
 
       {showProviders && (
@@ -307,6 +324,7 @@ export default function Session() {
                     key={currentBranch}
                     sessionId={sessionId}
                     currentBranch={currentBranch}
+                    pendingRun={pendingRun}
                   />
                 </Panel>
               </PanelGroup>

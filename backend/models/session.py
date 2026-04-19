@@ -21,3 +21,4 @@ class Session(BaseModel):
     github_username: Optional[str] = None
     ports: list[dict] = []
     ai_providers: list[dict] = []  # {tag, provider, display_name, key_ciphertext, key_iv}
+    run_configs: list[dict] = []   # {id, name, command}

@@ -10,10 +10,11 @@ interface PaneProps {
   sessionId: string
   currentBranch: string
   active: boolean
-  sharedName?: string  // if set, connects to the shared PTY endpoint
+  sharedName?: string
+  autoRun?: string
 }
 
-function TerminalPane({ sessionId, currentBranch, active, sharedName }: PaneProps) {
+function TerminalPane({ sessionId, currentBranch, active, sharedName, autoRun }: PaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
@@ -47,6 +48,12 @@ function TerminalPane({ sessionId, currentBranch, active, sharedName }: PaneProp
 
     ws.onopen = () => {
       if (!sharedName) term.write('\r\n\x1b[32mConnected\x1b[0m\r\n')
+      if (autoRun) {
+        // Small delay so bash finishes initialising before we send
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(autoRun + '\n')
+        }, 400)
+      }
     }
     ws.onmessage = (e) => term.write(new Uint8Array(e.data))
     ws.onerror = () => term.write('\r\n\x1b[31mConnection error\x1b[0m\r\n')
@@ -64,7 +71,7 @@ function TerminalPane({ sessionId, currentBranch, active, sharedName }: PaneProp
       ws.close()
       term.dispose()
     }
-  }, [sessionId, currentBranch, sharedName])
+  }, [sessionId, currentBranch, sharedName, autoRun])
 
   useEffect(() => {
     if (active) setTimeout(() => fitAddonRef.current?.fit(), 0)
@@ -89,19 +96,29 @@ function TerminalPane({ sessionId, currentBranch, active, sharedName }: PaneProp
 
 interface Tab {
   id: number
-  sharedName?: string  // undefined = private, string = shared terminal name
+  sharedName?: string
+  autoRun?: string
 }
 
 interface Props {
   sessionId: string | undefined
   currentBranch: string
+  pendingRun?: { command: string; ts: number } | null
 }
 
-export default function TerminalPanel({ sessionId, currentBranch }: Props) {
+export default function TerminalPanel({ sessionId, currentBranch, pendingRun }: Props) {
   const nextId = useRef(2)
   const [tabs, setTabs] = useState<Tab[]>([{ id: 1 }])
   const [activeId, setActiveId] = useState(1)
   const knownSharedRef = useRef<Set<string>>(new Set())
+
+  // Open a new tab and auto-run the command when pendingRun changes
+  useEffect(() => {
+    if (!pendingRun) return
+    const id = nextId.current++
+    setTabs(prev => [...prev, { id, autoRun: pendingRun.command }])
+    setActiveId(id)
+  }, [pendingRun])
 
   // Poll for shared terminals created by other users
   useEffect(() => {
@@ -240,6 +257,7 @@ export default function TerminalPanel({ sessionId, currentBranch }: Props) {
             currentBranch={currentBranch}
             active={tab.id === activeId}
             sharedName={tab.sharedName}
+            autoRun={tab.autoRun}
           />
         ))}
       </div>
