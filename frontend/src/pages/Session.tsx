@@ -32,7 +32,7 @@ export default function Session() {
   const location = useLocation()
   const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
   const githubToken = sessionStorage.getItem('github_token') ?? ''
-  const { editorRef, handleEditorMount, switchFile, setAwarenessBranch, providerRef } = useCollaboration(sessionId, username)
+  const { editorRef, handleEditorMount, switchFile, setAwarenessBranch, closeFile, providerRef } = useCollaboration(sessionId, username)
   const [repoName, setRepoName] = useState<string>(location.state?.repo_full_name ?? '')
   const [currentBranch, setCurrentBranch] = useState<string>('main')
   const currentBranchRef = useRef<string>('main')
@@ -162,6 +162,7 @@ export default function Session() {
 
     setOpenFiles(next)
     openFilesRef.current = next
+    closeFile(path, currentBranchRef.current)
 
     if (activeFileRef.current === path) {
       const nextActive = next[idx] ?? next[idx - 1] ?? null
@@ -173,7 +174,7 @@ export default function Session() {
         editorRef.current?.setValue('')
       }
     }
-  }, [handleFileSelect, editorRef])
+  }, [handleFileSelect, editorRef, closeFile])
   closeTabRef.current = handleTabClose
 
   return (

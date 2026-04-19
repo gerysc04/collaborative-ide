@@ -27,11 +27,22 @@ function ensureCursorStyle(username: string, color: string) {
   document.head.appendChild(s)
 }
 
+interface FileEntry {
+  ydoc: Y.Doc
+  provider: WebsocketProvider
+  ytext: Y.Text
+}
+
 export function useCollaboration(sessionId: string | undefined, username: string) {
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<any>(null)
-  const ydocRef = useRef<Y.Doc | null>(null)
+
+  // Session-level provider — awareness only, no file content
   const providerRef = useRef<WebsocketProvider | null>(null)
+
+  // Per-file providers: `branch:path` → FileEntry
+  const fileProvidersRef = useRef<Map<string, FileEntry>>(new Map())
+
   const currentYtextRef = useRef<Y.Text | null>(null)
   const ytextObserverRef = useRef<((e: any) => void) | null>(null)
   const editorListenerRef = useRef<{ dispose: () => void } | null>(null)
@@ -65,7 +76,6 @@ export function useCollaboration(sessionId: string | undefined, username: string
       ensureCursorStyle(remoteUser, color)
       const cls = safeClass(remoteUser)
 
-      // Remove decorations if user is on a different file or branch
       if (!cursor || cursor.path !== currentPath || cursor.branch !== currentBranch) {
         const old = decorationsRef.current.get(remoteUser) ?? []
         decorationsRef.current.set(remoteUser, editor.deltaDecorations(old, []))
@@ -80,13 +90,11 @@ export function useCollaboration(sessionId: string | undefined, username: string
       const { lineNumber, column, selection } = cursor
       const newDecos: any[] = []
 
-      // Caret: thin colored left border on the character at cursor position
       newDecos.push({
         range: new monaco.Range(lineNumber, column, lineNumber, column + 1),
         options: { inlineClassName: `rc-cur-${cls}` },
       })
 
-      // Selection highlight
       if (selection) {
         const { startLine, startColumn, endLine, endColumn } = selection
         if (startLine !== endLine || startColumn !== endColumn) {
@@ -100,7 +108,6 @@ export function useCollaboration(sessionId: string | undefined, username: string
       const old = decorationsRef.current.get(remoteUser) ?? []
       decorationsRef.current.set(remoteUser, editor.deltaDecorations(old, newDecos))
 
-      // Username label widget
       let widget = widgetsRef.current.get(remoteUser)
       if (!widget) {
         const domNode = document.createElement('div')
@@ -135,7 +142,6 @@ export function useCollaboration(sessionId: string | undefined, username: string
       editor.layoutContentWidget(widget)
     })
 
-    // Remove widgets for users who left
     widgetsRef.current.forEach((widget, uname) => {
       if (!activeUsernames.has(uname)) {
         editor.removeContentWidget(widget)
@@ -150,16 +156,39 @@ export function useCollaboration(sessionId: string | undefined, username: string
     editorRef.current = editor
     monacoRef.current = monaco
 
+    // Session-level doc — awareness only
     const ydoc = new Y.Doc()
-    ydocRef.current = ydoc
     const provider = new WebsocketProvider(COLLAB_WS_URL, sessionId!, ydoc)
     providerRef.current = provider
     provider.awareness.setLocalStateField('username', username)
     provider.awareness.setLocalStateField('branch', 'main')
     provider.awareness.setLocalStateField('cursor', null)
-
     provider.awareness.on('change', renderRemoteCursors)
   }
+
+  const getOrCreateFileProvider = (path: string, branch: string): FileEntry => {
+    const key = `${branch}:${path}`
+    if (fileProvidersRef.current.has(key)) {
+      return fileProvidersRef.current.get(key)!
+    }
+    const ydoc = new Y.Doc()
+    const roomName = `${sessionId}/${encodeURIComponent(branch)}:${encodeURIComponent(path)}`
+    const provider = new WebsocketProvider(COLLAB_WS_URL, roomName, ydoc)
+    const ytext = ydoc.getText('content')
+    const entry: FileEntry = { ydoc, provider, ytext }
+    fileProvidersRef.current.set(key, entry)
+    return entry
+  }
+
+  const closeFile = useCallback((path: string, branch: string) => {
+    const key = `${branch}:${path}`
+    const entry = fileProvidersRef.current.get(key)
+    if (entry) {
+      entry.provider.destroy()
+      entry.ydoc.destroy()
+      fileProvidersRef.current.delete(key)
+    }
+  }, [])
 
   const setAwarenessBranch = useCallback((branch: string) => {
     currentBranchRef.current = branch
@@ -169,17 +198,14 @@ export function useCollaboration(sessionId: string | undefined, username: string
 
   const switchFile = useCallback((path: string, initialContent: string, language: string, branch: string = 'main') => {
     const editor = editorRef.current
-    const ydoc = ydocRef.current
     const monaco = monacoRef.current
-    if (!editor || !ydoc) return
+    if (!editor) return
 
     currentPathRef.current = path
     currentBranchRef.current = branch
-
-    // Clear local cursor from awareness before switching
     providerRef.current?.awareness.setLocalStateField('cursor', null)
 
-    // Tear down previous bindings
+    // Tear down listeners for the previous file (but keep its provider alive)
     if (currentYtextRef.current && ytextObserverRef.current) {
       currentYtextRef.current.unobserve(ytextObserverRef.current)
     }
@@ -187,7 +213,7 @@ export function useCollaboration(sessionId: string | undefined, username: string
     cursorListenerRef.current?.dispose()
     selectionListenerRef.current?.dispose()
 
-    const ytext = ydoc.getText(`${branch}:${path}`)
+    const { ydoc, ytext } = getOrCreateFileProvider(path, branch)
     currentYtextRef.current = ytext
 
     if (ytext.length === 0 && initialContent.length > 0) {
@@ -215,7 +241,7 @@ export function useCollaboration(sessionId: string | undefined, username: string
       }
     })
 
-    // Cursor position → awareness
+    // Cursor → awareness (on session provider so all users see it)
     cursorListenerRef.current = editor.onDidChangeCursorPosition((e: any) => {
       providerRef.current?.awareness.setLocalStateField('cursor', {
         path,
@@ -226,7 +252,6 @@ export function useCollaboration(sessionId: string | undefined, username: string
       })
     })
 
-    // Selection → awareness (overrides cursor-only state)
     selectionListenerRef.current = editor.onDidChangeCursorSelection((e: any) => {
       const sel = e.selection
       providerRef.current?.awareness.setLocalStateField('cursor', {
@@ -249,5 +274,5 @@ export function useCollaboration(sessionId: string | undefined, username: string
     }
   }, [])
 
-  return { editorRef, monacoRef, handleEditorMount, switchFile, setAwarenessBranch, providerRef }
+  return { editorRef, monacoRef, handleEditorMount, switchFile, setAwarenessBranch, closeFile, providerRef }
 }
