@@ -13,6 +13,8 @@ interface Props {
   currentBranch: string
   onFileSelect: (path: string) => void
   selectedFile?: string
+  isCollapsed?: boolean
+  onToggle?: () => void
 }
 
 function TreeNode({
@@ -78,7 +80,7 @@ function TreeNode({
   )
 }
 
-export default function FileTree({ sessionId, currentBranch, onFileSelect, selectedFile }: Props) {
+export default function FileTree({ sessionId, currentBranch, onFileSelect, selectedFile, isCollapsed, onToggle }: Props) {
   const [tree, setTree] = useState<FileNode | null>(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['/app']))
@@ -210,7 +212,7 @@ export default function FileTree({ sessionId, currentBranch, onFileSelect, selec
         justifyContent: 'space-between',
       }}>
         <span>Files</span>
-        <div style={{ display: 'flex', gap: '2px' }}>
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
           <button
             style={btnStyle}
             title="New file"

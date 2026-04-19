@@ -119,11 +119,48 @@
   cursor: col-resize;
   transition: background 0.2s;
   flex-shrink: 0;
+  position: relative;
+  overflow: visible;
 }
 
 .resize-handle--vertical:hover,
 .resize-handle--vertical[data-resize-handle-active] {
   background: var(--accent);
+}
+
+.panel-bookmark {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 14px;
+  height: 44px;
+  background: #000;
+  border: 1px solid #222;
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  padding: 0;
+  transition: border-color 0.15s;
+}
+
+.panel-bookmark:hover {
+  border-color: var(--accent);
+}
+
+.panel-bookmark--left {
+  left: 4px;
+  border-left: none;
+  border-radius: 0 5px 5px 0;
+}
+
+.panel-bookmark--right {
+  right: 4px;
+  border-right: none;
+  border-radius: 5px 0 0 5px;
 }
 
 .resize-handle--horizontal {
@@ -152,6 +189,22 @@
 
 .session__btn--ports:hover,
 .session__btn--ports-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.session__btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--bg-border);
+}
+
+.session__btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.session__btn--active {
   border-color: var(--accent);
   color: var(--accent);
 }

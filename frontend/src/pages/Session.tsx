@@ -1,6 +1,7 @@
 import { useParams, useLocation } from 'react-router-dom'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
+import type { ImperativePanelHandle } from 'react-resizable-panels'
 import { useCollaboration } from '../hooks/useCollaboration'
 import CodeEditor from '../components/CodeEditor'
 import EditorTabs from '../components/EditorTabs'
@@ -36,6 +37,20 @@ export default function Session() {
   const currentBranchRef = useRef<string>('main')
   const [codeCopied, setCodeCopied] = useState(false)
   const [showPorts, setShowPorts] = useState(false)
+  const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
+  const [chatCollapsed, setChatCollapsed] = useState(false)
+  const fileTreePanelRef = useRef<ImperativePanelHandle>(null)
+  const chatPanelRef = useRef<ImperativePanelHandle>(null)
+
+  const toggleFileTree = useCallback(() => {
+    if (fileTreeCollapsed) { fileTreePanelRef.current?.expand(); setFileTreeCollapsed(false) }
+    else { fileTreePanelRef.current?.collapse(); setFileTreeCollapsed(true) }
+  }, [fileTreeCollapsed])
+
+  const toggleChat = useCallback(() => {
+    if (chatCollapsed) { chatPanelRef.current?.expand(); setChatCollapsed(false) }
+    else { chatPanelRef.current?.collapse(); setChatCollapsed(true) }
+  }, [chatCollapsed])
 
   useEffect(() => {
     if (!sessionId) return
@@ -189,16 +204,26 @@ export default function Session() {
 
       <div className="session__body">
         <PanelGroup direction="horizontal" style={{ height: '100%' }}>
-          <Panel defaultSize={20} minSize={15} maxSize={30}>
+          <Panel ref={fileTreePanelRef} defaultSize={20} minSize={15} maxSize={30} collapsible collapsedSize={0} onCollapse={() => setFileTreeCollapsed(true)} onExpand={() => setFileTreeCollapsed(false)}>
             <FileTree
               sessionId={sessionId}
               currentBranch={currentBranch}
               onFileSelect={handleFileSelect}
               selectedFile={activeFile ?? undefined}
+              isCollapsed={fileTreeCollapsed}
+              onToggle={toggleFileTree}
             />
           </Panel>
 
-          <PanelResizeHandle className="resize-handle resize-handle--vertical" />
+          <PanelResizeHandle className="resize-handle resize-handle--vertical">
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleFileTree() }}
+              title={fileTreeCollapsed ? 'Open file tree' : 'Close file tree'}
+              className="panel-bookmark panel-bookmark--left"
+            >
+              {fileTreeCollapsed ? '›' : '‹'}
+            </button>
+          </PanelResizeHandle>
 
           <Panel defaultSize={55} minSize={30}>
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -224,10 +249,18 @@ export default function Session() {
             </div>
           </Panel>
 
-          <PanelResizeHandle className="resize-handle resize-handle--vertical" />
+          <PanelResizeHandle className="resize-handle resize-handle--vertical">
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleChat() }}
+              title={chatCollapsed ? 'Open chat' : 'Close chat'}
+              className="panel-bookmark panel-bookmark--right"
+            >
+              {chatCollapsed ? '‹' : '›'}
+            </button>
+          </PanelResizeHandle>
 
-          <Panel defaultSize={25} minSize={20} maxSize={35}>
-            <Chat sessionId={sessionId} username={username} />
+          <Panel ref={chatPanelRef} defaultSize={25} minSize={20} maxSize={35} collapsible collapsedSize={0} onCollapse={() => setChatCollapsed(true)} onExpand={() => setChatCollapsed(false)}>
+            <Chat sessionId={sessionId} username={username} isCollapsed={chatCollapsed} onToggle={toggleChat} />
           </Panel>
         </PanelGroup>
       </div>

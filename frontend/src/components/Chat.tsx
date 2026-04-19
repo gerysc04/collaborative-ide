@@ -12,13 +12,15 @@ interface Message {
 interface Props {
   sessionId: string | undefined
   username: string
+  isCollapsed?: boolean
+  onToggle?: () => void
 }
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function Chat({ sessionId, username }: Props) {
+export default function Chat({ sessionId, username, isCollapsed, onToggle }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const ydocRef = useRef<Y.Doc | null>(null)
@@ -81,7 +83,7 @@ export default function Chat({ sessionId, username }: Props) {
         borderBottom: '1px solid var(--bg-border)',
         flexShrink: 0,
       }}>
-        Chat
+        <span>Chat</span>
       </div>
 
       <div style={{
