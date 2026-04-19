@@ -12,6 +12,7 @@ import PortsPanel from '../components/PortsPanel'
 import ProvidersPanel from '../components/ProvidersPanel'
 import BranchSwitcher from '../components/BranchSwitcher'
 import PresenceAvatars from '../components/PresenceAvatars'
+import FilePalette from '../components/FilePalette'
 import { API_URL } from '../config'
 import '../styles/Session.css'
 
@@ -40,6 +41,7 @@ export default function Session() {
   const [codeCopied, setCodeCopied] = useState(false)
   const [showPorts, setShowPorts] = useState(false)
   const [showProviders, setShowProviders] = useState(false)
+  const [showPalette, setShowPalette] = useState(false)
   const [isResuming, setIsResuming] = useState(false)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
   const [chatCollapsed, setChatCollapsed] = useState(false)
@@ -79,6 +81,18 @@ export default function Session() {
       })
       .catch(() => {})
   }, [sessionId])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault()
+        setShowPalette(p => !p)
+      }
+      if (e.key === 'Escape') setShowPalette(false)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const handleBranchChange = useCallback((branch: string) => {
     setAwarenessBranch(branch)
@@ -224,6 +238,15 @@ export default function Session() {
 
       {showProviders && (
         <ProvidersPanel sessionId={sessionId} onClose={() => setShowProviders(false)} />
+      )}
+
+      {showPalette && (
+        <FilePalette
+          sessionId={sessionId}
+          currentBranch={currentBranch}
+          onSelect={handleFileSelect}
+          onClose={() => setShowPalette(false)}
+        />
       )}
 
       {isResuming && (
