@@ -3,10 +3,11 @@ import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { COLLAB_WS_URL } from '../config'
 
-export function useCollaboration(sessionId: string | undefined) {
+export function useCollaboration(sessionId: string | undefined, username: string) {
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<any>(null)
   const ydocRef = useRef<Y.Doc | null>(null)
+  const providerRef = useRef<WebsocketProvider | null>(null)
   const currentYtextRef = useRef<Y.Text | null>(null)
   const ytextObserverRef = useRef<((e: any) => void) | null>(null)
   const editorListenerRef = useRef<{ dispose: () => void } | null>(null)
@@ -17,10 +18,17 @@ export function useCollaboration(sessionId: string | undefined) {
 
     const ydoc = new Y.Doc()
     ydocRef.current = ydoc
-    new WebsocketProvider(COLLAB_WS_URL, sessionId!, ydoc)
+    const provider = new WebsocketProvider(COLLAB_WS_URL, sessionId!, ydoc)
+    providerRef.current = provider
+    provider.awareness.setLocalStateField('username', username)
+    provider.awareness.setLocalStateField('branch', 'main')
   }
 
-  const switchFile = useCallback((path: string, initialContent: string, language: string) => {
+  const setAwarenessBranch = useCallback((branch: string) => {
+    providerRef.current?.awareness.setLocalStateField('branch', branch)
+  }, [])
+
+  const switchFile = useCallback((path: string, initialContent: string, language: string, branch: string = 'main') => {
     const editor = editorRef.current
     const ydoc = ydocRef.current
     const monaco = monacoRef.current
@@ -34,7 +42,7 @@ export function useCollaboration(sessionId: string | undefined) {
       editorListenerRef.current.dispose()
     }
 
-    const ytext = ydoc.getText(path)
+    const ytext = ydoc.getText(`${branch}:${path}`)
     currentYtextRef.current = ytext
 
     // Seed Yjs from the container if this file hasn't been opened yet
@@ -71,5 +79,5 @@ export function useCollaboration(sessionId: string | undefined) {
     }
   }, [])
 
-  return { editorRef, monacoRef, handleEditorMount, switchFile }
+  return { editorRef, monacoRef, handleEditorMount, switchFile, setAwarenessBranch, providerRef }
 }

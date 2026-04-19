@@ -1,3 +1,4 @@
+import re
 import asyncio
 import traceback
 import docker
@@ -11,6 +12,10 @@ DB_IMAGES = {
     "mongodb": ("mongo:7", {"MONGO_INITDB_DATABASE": "app"}),
     "redis": ("redis:7-alpine", {}),
 }
+
+
+def _safe_branch(branch: str) -> str:
+    return re.sub(r'[^a-zA-Z0-9_.-]', '-', branch)[:40]
 
 
 async def run_code(code: str) -> str:
@@ -36,6 +41,7 @@ def create_session_network(session_id: str) -> str:
 
 
 def create_container(session_id: str, network_name: str) -> str:
+    """Creates the initial container for a session (branch detected after clone)."""
     container = client.containers.create(
         "collide-dev",
         command="/bin/bash",
@@ -47,6 +53,32 @@ def create_container(session_id: str, network_name: str) -> str:
         name=f"collide-{session_id}",
         network=network_name,
         labels={"collide_session": session_id, "collide_role": "app"}
+    )
+    container.start()
+    container.exec_run(["mkdir", "-p", "/app"])
+    return container.id
+
+
+def rename_container_for_branch(container_id: str, session_id: str, branch: str) -> None:
+    safe = _safe_branch(branch)
+    container = client.containers.get(container_id)
+    container.rename(f"collide-{session_id}-{safe}")
+
+
+def create_branch_container(session_id: str, branch: str, network_name: str) -> str:
+    """Creates a new container for a specific branch."""
+    safe = _safe_branch(branch)
+    container = client.containers.create(
+        "collide-dev",
+        command="/bin/bash",
+        stdin_open=True,
+        tty=True,
+        mem_limit="1g",
+        cpu_period=100000,
+        cpu_quota=200000,
+        name=f"collide-{session_id}-{safe}",
+        network=network_name,
+        labels={"collide_session": session_id, "collide_role": "app", "collide_branch": branch}
     )
     container.start()
     container.exec_run(["mkdir", "-p", "/app"])

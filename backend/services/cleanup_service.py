@@ -49,14 +49,23 @@ async def cleanup_old_sessions() -> None:
 
     loop = asyncio.get_event_loop()
     for session in expired:
-        container_id = session.get("container_id")
-        if container_id:
+        # Remove all branch containers
+        containers = session.get("containers", {})
+        for container_id in containers.values():
             await loop.run_in_executor(None, _remove_container, container_id)
 
+        # Fallback for legacy sessions with single container_id
+        if not containers:
+            container_id = session.get("container_id")
+            if container_id:
+                await loop.run_in_executor(None, _remove_container, container_id)
+
+        # Remove DB container
         db_container_id = session.get("db_container_id")
         if db_container_id:
             await loop.run_in_executor(None, _remove_container, db_container_id)
 
+        # Remove network (after all containers are removed)
         network_name = session.get("network_name")
         if network_name:
             await loop.run_in_executor(None, _remove_network, network_name)

@@ -1,7 +1,7 @@
+from typing import Optional, Literal
 from fastapi import APIRouter, WebSocket
 from pathlib import PurePosixPath
 from pydantic import BaseModel
-from typing import Literal
 from services.file_service import get_file_tree, get_file_content, write_file_content, create_file_or_dir, watch_files
 from services.mongo_service import sessions_collection
 
@@ -20,44 +20,69 @@ def _safe_path(path: str) -> bool:
     except Exception:
         return False
 
+def _resolve_container(session: dict, branch: Optional[str]) -> Optional[str]:
+    containers = session.get("containers", {})
+    default_branch = session.get("default_branch", "main")
+    target = branch or default_branch
+    container_id = containers.get(target)
+    if not container_id:
+        container_id = session.get("container_id")
+    return container_id
+
 @router.get("/sessions/{session_id}/files")
-async def files(session_id: str):
+async def files(session_id: str, branch: Optional[str] = None):
     session = await sessions_collection.find_one({"id": session_id})
-    if not session or not session.get("container_id"):
+    if not session:
         return {"error": "Session not found"}
-    return await get_file_tree(session["container_id"])
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        return {"error": "No container for this branch"}
+    return await get_file_tree(container_id)
 
 @router.get("/sessions/{session_id}/files/content")
-async def file_content(session_id: str, path: str):
+async def file_content(session_id: str, path: str, branch: Optional[str] = None):
     session = await sessions_collection.find_one({"id": session_id})
-    if not session or not session.get("container_id"):
+    if not session:
         return {"error": "Session not found"}
-    content = await get_file_content(session["container_id"], path)
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        return {"error": "No container for this branch"}
+    content = await get_file_content(container_id, path)
     return {"content": content}
 
 @router.post("/sessions/{session_id}/files/content")
-async def write_content(session_id: str, path: str, body: WriteFileRequest):
+async def write_content(session_id: str, path: str, body: WriteFileRequest, branch: Optional[str] = None):
     session = await sessions_collection.find_one({"id": session_id})
-    if not session or not session.get("container_id"):
+    if not session:
         return {"error": "Session not found"}
-    await write_file_content(session["container_id"], path, body.content)
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        return {"error": "No container for this branch"}
+    await write_file_content(container_id, path, body.content)
     return {"success": True}
 
 @router.post("/sessions/{session_id}/files/new")
-async def create_node(session_id: str, path: str, body: CreateNodeRequest):
+async def create_node(session_id: str, path: str, body: CreateNodeRequest, branch: Optional[str] = None):
     if not _safe_path(path):
         return {"error": "Invalid path"}
     session = await sessions_collection.find_one({"id": session_id})
-    if not session or not session.get("container_id"):
+    if not session:
         return {"error": "Session not found"}
-    await create_file_or_dir(session["container_id"], path, body.type)
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        return {"error": "No container for this branch"}
+    await create_file_or_dir(container_id, path, body.type)
     return {"success": True}
 
 @router.websocket("/ws/files/{session_id}")
-async def file_watcher(websocket: WebSocket, session_id: str):
+async def file_watcher(websocket: WebSocket, session_id: str, branch: Optional[str] = None):
     await websocket.accept()
     session = await sessions_collection.find_one({"id": session_id})
-    if not session or not session.get("container_id"):
+    if not session:
         await websocket.close()
         return
-    await watch_files(websocket, session["container_id"])
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        await websocket.close()
+        return
+    await watch_files(websocket, container_id)

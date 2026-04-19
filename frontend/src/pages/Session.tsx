@@ -2,13 +2,13 @@ import { useParams, useLocation } from 'react-router-dom'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import { useCollaboration } from '../hooks/useCollaboration'
-import { useExecution } from '../hooks/useExecution'
 import CodeEditor from '../components/CodeEditor'
 import EditorTabs from '../components/EditorTabs'
 import FileTree from '../components/FileTree'
 import Chat from '../components/Chat'
 import TerminalPanel from '../components/TerminalPanel'
 import PortsPanel from '../components/PortsPanel'
+import BranchSwitcher from '../components/BranchSwitcher'
 import { API_URL } from '../config'
 import '../styles/Session.css'
 
@@ -29,25 +29,39 @@ export default function Session() {
   const { sessionId } = useParams()
   const location = useLocation()
   const username = location.state?.username || sessionStorage.getItem('username') || 'anonymous'
-  const { editorRef, handleEditorMount, switchFile } = useCollaboration(sessionId)
-  const { running, error, runCode } = useExecution(sessionId, editorRef)
-
+  const githubToken = sessionStorage.getItem('github_token') ?? ''
+  const { editorRef, handleEditorMount, switchFile, setAwarenessBranch, providerRef } = useCollaboration(sessionId, username)
   const [repoName, setRepoName] = useState<string>(location.state?.repo_full_name ?? '')
+  const [currentBranch, setCurrentBranch] = useState<string>('main')
+  const currentBranchRef = useRef<string>('main')
   const [codeCopied, setCodeCopied] = useState(false)
   const [showPorts, setShowPorts] = useState(false)
 
   useEffect(() => {
-    if (repoName || !sessionId) return
+    if (!sessionId) return
     fetch(`${API_URL}/sessions/${sessionId}`)
       .then(r => r.json())
       .then(data => {
-        if (data.repo_url) {
+        if (data.repo_url && !repoName) {
           const parts = data.repo_url.replace('.git', '').split('/')
           setRepoName(parts.slice(-2).join('/'))
         }
+        const branch = data.default_branch || 'main'
+        setCurrentBranch(branch)
+        currentBranchRef.current = branch
       })
       .catch(() => {})
-  }, [sessionId, repoName])
+  }, [sessionId])
+
+  const handleBranchChange = useCallback((branch: string) => {
+    setAwarenessBranch(branch)
+    setCurrentBranch(branch)
+    currentBranchRef.current = branch
+    setOpenFiles([])
+    setActiveFile(null)
+    activeFileRef.current = null
+    editorRef.current?.setValue('')
+  }, [editorRef, setAwarenessBranch])
 
   const copySessionCode = () => {
     if (!sessionId) return
@@ -79,9 +93,10 @@ export default function Session() {
       if (!activeFileRef.current) return
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
       const path = activeFileRef.current
+      const branch = currentBranchRef.current
       saveTimeoutRef.current = setTimeout(async () => {
         await fetch(
-          `${API_URL}/sessions/${sessionId}/files/content?path=${encodeURIComponent(path)}`,
+          `${API_URL}/sessions/${sessionId}/files/content?path=${encodeURIComponent(path)}&branch=${encodeURIComponent(branch)}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -102,11 +117,12 @@ export default function Session() {
     activeFileRef.current = path
 
     try {
+      const branch = currentBranchRef.current
       const res = await fetch(
-        `${API_URL}/sessions/${sessionId}/files/content?path=${encodeURIComponent(path)}`
+        `${API_URL}/sessions/${sessionId}/files/content?path=${encodeURIComponent(path)}&branch=${encodeURIComponent(branch)}`
       )
       const data = await res.json()
-      switchFile(path, data.content ?? '', detectLanguage(path))
+      switchFile(path, data.content ?? '', detectLanguage(path), currentBranchRef.current)
       editorRef.current?.focus()
     } catch (e) {
       console.error('Failed to load file:', e)
@@ -140,6 +156,14 @@ export default function Session() {
         <div className="session__toolbar-left">
           <span className="session__logo">Collide</span>
           {repoName && <span className="session__repo">{repoName}</span>}
+          <BranchSwitcher
+            sessionId={sessionId}
+            currentBranch={currentBranch}
+            username={username}
+            githubToken={githubToken}
+            providerRef={providerRef}
+            onBranchChange={handleBranchChange}
+          />
         </div>
         <div className="session__toolbar-right">
           <span className="session__id">{username}</span>
@@ -156,9 +180,6 @@ export default function Session() {
           >
             Ports
           </button>
-          <button className="session__btn session__btn--run" onClick={runCode} disabled={running}>
-            {running ? 'Running...' : '▶ Run'}
-          </button>
         </div>
       </div>
 
@@ -171,6 +192,7 @@ export default function Session() {
           <Panel defaultSize={20} minSize={15} maxSize={30}>
             <FileTree
               sessionId={sessionId}
+              currentBranch={currentBranch}
               onFileSelect={handleFileSelect}
               selectedFile={activeFile ?? undefined}
             />
@@ -192,7 +214,11 @@ export default function Session() {
                 </Panel>
                 <PanelResizeHandle className="resize-handle resize-handle--horizontal" />
                 <Panel defaultSize={35} minSize={15}>
-                  <TerminalPanel sessionId={sessionId} />
+                  <TerminalPanel
+                    key={currentBranch}
+                    sessionId={sessionId}
+                    currentBranch={currentBranch}
+                  />
                 </Panel>
               </PanelGroup>
             </div>
@@ -206,11 +232,6 @@ export default function Session() {
         </PanelGroup>
       </div>
 
-      {error && (
-        <div style={{ position: 'fixed', bottom: '1rem', right: '1rem', color: '#ff4d4d', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-          {error}
-        </div>
-      )}
     </div>
   )
 }

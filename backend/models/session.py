@@ -9,9 +9,10 @@ class Session(BaseModel):
     owner: str
     collaborators: list[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    container_id: Optional[str] = None
+    containers: dict[str, str] = {}       # branch_name → container_id
+    default_branch: str = "main"
     db_container_id: Optional[str] = None
-    db_type: Optional[str] = None  # "postgresql", "mongodb", "redis", or None
+    db_type: Optional[str] = None
     network_name: Optional[str] = None
     repo_url: Optional[str] = None
     github_username: Optional[str] = None

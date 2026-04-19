@@ -10,6 +10,7 @@ interface FileNode {
 
 interface Props {
   sessionId: string | undefined
+  currentBranch: string
   onFileSelect: (path: string) => void
   selectedFile?: string
 }
@@ -77,7 +78,7 @@ function TreeNode({
   )
 }
 
-export default function FileTree({ sessionId, onFileSelect, selectedFile }: Props) {
+export default function FileTree({ sessionId, currentBranch, onFileSelect, selectedFile }: Props) {
   const [tree, setTree] = useState<FileNode | null>(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['/app']))
@@ -90,7 +91,7 @@ export default function FileTree({ sessionId, onFileSelect, selectedFile }: Prop
   const fetchTree = useCallback(async () => {
     if (!sessionId) return
     try {
-      const res = await fetch(`${API_URL}/sessions/${sessionId}/files`)
+      const res = await fetch(`${API_URL}/sessions/${sessionId}/files?branch=${encodeURIComponent(currentBranch)}`)
       const data = await res.json()
       if (!data.error) setTree(data)
     } catch (e) {
@@ -98,7 +99,7 @@ export default function FileTree({ sessionId, onFileSelect, selectedFile }: Prop
     } finally {
       setLoading(false)
     }
-  }, [sessionId])
+  }, [sessionId, currentBranch])
 
   useEffect(() => {
     fetchTree()
@@ -109,7 +110,7 @@ export default function FileTree({ sessionId, onFileSelect, selectedFile }: Prop
     let retryTimeout: ReturnType<typeof setTimeout>
 
     const connect = () => {
-      const ws = new WebSocket(`${API_WS_URL}/ws/files/${sessionId}`)
+      const ws = new WebSocket(`${API_WS_URL}/ws/files/${sessionId}?branch=${encodeURIComponent(currentBranch)}`)
       wsRef.current = ws
 
       ws.onmessage = () => {
@@ -127,7 +128,7 @@ export default function FileTree({ sessionId, onFileSelect, selectedFile }: Prop
       if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current)
       wsRef.current?.close()
     }
-  }, [sessionId, fetchTree])
+  }, [sessionId, currentBranch, fetchTree])
 
   useEffect(() => {
     if (creating) inputRef.current?.focus()
@@ -154,7 +155,7 @@ export default function FileTree({ sessionId, onFileSelect, selectedFile }: Prop
     const fullPath = `/app/${trimmed.replace(/^\/+/, '')}`
     try {
       await fetch(
-        `${API_URL}/sessions/${sessionId}/files/new?path=${encodeURIComponent(fullPath)}`,
+        `${API_URL}/sessions/${sessionId}/files/new?path=${encodeURIComponent(fullPath)}&branch=${encodeURIComponent(currentBranch)}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

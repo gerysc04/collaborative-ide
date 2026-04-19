@@ -8,10 +8,11 @@ import { API_WS_URL } from '../config'
 
 interface PaneProps {
   sessionId: string
+  currentBranch: string
   active: boolean
 }
 
-function TerminalPane({ sessionId, active }: PaneProps) {
+function TerminalPane({ sessionId, currentBranch, active }: PaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
@@ -36,7 +37,7 @@ function TerminalPane({ sessionId, active }: PaneProps) {
     term.open(containerRef.current)
     fitAddon.fit()
 
-    const ws = new WebSocket(`${API_WS_URL}/ws/terminal/${sessionId}`)
+    const ws = new WebSocket(`${API_WS_URL}/ws/terminal/${sessionId}?branch=${encodeURIComponent(currentBranch)}`)
     ws.binaryType = 'arraybuffer'
 
     ws.onopen = () => term.write('\r\n\x1b[32mConnected\x1b[0m\r\n')
@@ -56,7 +57,7 @@ function TerminalPane({ sessionId, active }: PaneProps) {
       ws.close()
       term.dispose()
     }
-  }, [sessionId])
+  }, [sessionId, currentBranch])
 
   // Re-fit when this pane becomes visible
   useEffect(() => {
@@ -84,9 +85,10 @@ interface Tab { id: number }
 
 interface Props {
   sessionId: string | undefined
+  currentBranch: string
 }
 
-export default function TerminalPanel({ sessionId }: Props) {
+export default function TerminalPanel({ sessionId, currentBranch }: Props) {
   const nextId = useRef(2)
   const [tabs, setTabs] = useState<Tab[]>([{ id: 1 }])
   const [activeId, setActiveId] = useState(1)
@@ -183,6 +185,7 @@ export default function TerminalPanel({ sessionId }: Props) {
           <TerminalPane
             key={tab.id}
             sessionId={sessionId}
+            currentBranch={currentBranch}
             active={tab.id === activeId}
           />
         ))}
