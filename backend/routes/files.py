@@ -1,4 +1,5 @@
 import base64
+import shlex
 from typing import Optional, Literal
 from fastapi import APIRouter, WebSocket, UploadFile, File, Form, Query
 from fastapi.responses import Response, JSONResponse
@@ -45,6 +46,8 @@ async def files(session_id: str, branch: Optional[str] = None):
 
 @router.get("/sessions/{session_id}/files/content")
 async def file_content(session_id: str, path: str, branch: Optional[str] = None):
+    if not _safe_path(path):
+        return {"error": "Invalid path"}
     session = await sessions_collection.find_one({"id": session_id})
     if not session:
         return {"error": "Session not found"}
@@ -56,6 +59,8 @@ async def file_content(session_id: str, path: str, branch: Optional[str] = None)
 
 @router.post("/sessions/{session_id}/files/content")
 async def write_content(session_id: str, path: str, body: WriteFileRequest, branch: Optional[str] = None):
+    if not _safe_path(path):
+        return {"error": "Invalid path"}
     session = await sessions_collection.find_one({"id": session_id})
     if not session:
         return {"error": "Session not found"}
@@ -98,7 +103,7 @@ async def upload_file(
     encoded = base64.b64encode(content_bytes).decode("ascii")
     parent = str(PurePosixPath(path).parent)
     await exec_in_container(container_id, ["mkdir", "-p", parent])
-    await exec_in_container(container_id, ["sh", "-c", f"echo '{encoded}' | base64 -d > {path}"])
+    await exec_in_container(container_id, ["sh", "-c", f"echo '{encoded}' | base64 -d > {shlex.quote(path)}"])
     return {"success": True}
 
 

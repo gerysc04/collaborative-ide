@@ -9,7 +9,6 @@ import websockets
 logger = logging.getLogger(__name__)
 docker_client = docker.from_env()
 
-# Matches {8-char-hex}-{port}.anything  e.g. "72ea3b8c-3000.lvh.me:8000"
 SUBDOMAIN_RE = re.compile(r'^([0-9a-f]{8})-(\d+)\.')
 
 
@@ -67,7 +66,8 @@ class SubdomainProxyMiddleware:
 
     async def _resolve(self, short_id: str) -> str:
         from services.mongo_service import sessions_collection
-        # short_id is first 8 chars of the full UUID
+        if not re.fullmatch(r'[0-9a-f]{8}', short_id):
+            raise ValueError("Invalid session ID")
         session = await sessions_collection.find_one({"id": {"$regex": f"^{short_id}"}})
         if not session:
             raise ValueError("Session not found")

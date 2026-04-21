@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import shlex
 import traceback
 from fastapi import WebSocket
 
@@ -81,7 +82,7 @@ async def write_file_content(container_id: str, path: str, content: str) -> bool
     encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
     await exec_in_container(
         container_id,
-        ["sh", "-c", f"echo '{encoded}' | base64 -d > {path}"]
+        ["sh", "-c", f"echo '{encoded}' | base64 -d > {shlex.quote(path)}"]
     )
     return True
 
