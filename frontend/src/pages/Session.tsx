@@ -14,6 +14,7 @@ import BranchSwitcher from '../components/BranchSwitcher'
 import PresenceAvatars from '../components/PresenceAvatars'
 import FilePalette from '../components/FilePalette'
 import RunPanel from '../components/RunPanel'
+import GitPanel from '../components/GitPanel'
 import ResourceUsage from '../components/ResourceUsage'
 import { API_URL } from '../config'
 import '../styles/Session.css'
@@ -45,6 +46,7 @@ export default function Session() {
   const [showProviders, setShowProviders] = useState(false)
   const [showPalette, setShowPalette] = useState(false)
   const [showRun, setShowRun] = useState(false)
+  const [showGit, setShowGit] = useState(false)
   const [pendingRun, setPendingRun] = useState<{ command: string; ts: number } | null>(null)
   const [isResuming, setIsResuming] = useState(false)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
@@ -223,25 +225,35 @@ export default function Session() {
             session code: <span className="session__code-value">{codeCopied ? 'copied!' : sessionId}</span>
           </span>
           <button
+            className={`session__btn session__btn--ports${showGit ? ' session__btn--ports-active' : ''}`}
+            onClick={() => { setShowGit(p => !p); setShowRun(false); setShowPorts(false); setShowProviders(false) }}
+          >
+            Git
+          </button>
+          <button
             className={`session__btn session__btn--ports${showRun ? ' session__btn--ports-active' : ''}`}
-            onClick={() => { setShowRun(p => !p); setShowPorts(false); setShowProviders(false) }}
+            onClick={() => { setShowRun(p => !p); setShowPorts(false); setShowProviders(false); setShowGit(false) }}
           >
             ▶ Run
           </button>
           <button
             className={`session__btn session__btn--ports${showProviders ? ' session__btn--ports-active' : ''}`}
-            onClick={() => { setShowProviders(p => !p); setShowPorts(false); setShowRun(false) }}
+            onClick={() => { setShowProviders(p => !p); setShowPorts(false); setShowRun(false); setShowGit(false) }}
           >
             AI
           </button>
           <button
             className={`session__btn session__btn--ports${showPorts ? ' session__btn--ports-active' : ''}`}
-            onClick={() => { setShowPorts(p => !p); setShowProviders(false) }}
+            onClick={() => { setShowPorts(p => !p); setShowProviders(false); setShowRun(false); setShowGit(false) }}
           >
             Ports
           </button>
         </div>
       </div>
+
+      {showGit && (
+        <GitPanel sessionId={sessionId} currentBranch={currentBranch} onClose={() => setShowGit(false)} />
+      )}
 
       {showPorts && (
         <PortsPanel sessionId={sessionId} onClose={() => setShowPorts(false)} />

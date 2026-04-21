@@ -29,7 +29,7 @@ function parseAiTag(text: string): { tag: string; rest: string } | null {
   return { tag: match[1].toLowerCase(), rest: match[2].trim() }
 }
 
-export default function Chat({ sessionId, username, currentBranch, isCollapsed, onToggle }: Props) {
+export default function Chat({ sessionId, username, currentBranch, isCollapsed: _isCollapsed, onToggle: _onToggle }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)

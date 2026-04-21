@@ -57,7 +57,7 @@ export default function PortsPanel({ sessionId, onClose }: Props) {
   }
 
   const copyUrl = (port: number) => {
-    navigator.clipboard.writeText(proxyUrl(port))
+    navigator.clipboard.writeText(portUrl(port))
     setCopied(port)
     setTimeout(() => setCopied(null), 1500)
   }

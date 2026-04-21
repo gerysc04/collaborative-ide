@@ -141,7 +141,7 @@ function TreeNode({
   )
 }
 
-export default function FileTree({ sessionId, currentBranch, onFileSelect, selectedFile, isCollapsed, onToggle }: Props) {
+export default function FileTree({ sessionId, currentBranch, onFileSelect, selectedFile, isCollapsed: _isCollapsed, onToggle: _onToggle }: Props) {
   const [tree, setTree] = useState<FileNode | null>(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['/app']))

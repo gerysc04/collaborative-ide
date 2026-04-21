@@ -232,8 +232,12 @@ async def git_status(session_id: str, branch: Optional[str] = None):
         raise HTTPException(status_code=404, detail="No container for this branch")
 
     _, output = await exec_in_container(container_id, ["git", "-C", "/app", "status", "--porcelain"])
-    has_changes = bool(output and output.decode("utf-8", errors="replace").strip())
-    return {"has_changes": has_changes}
+    raw = output.decode("utf-8", errors="replace").strip() if output else ""
+    files = []
+    for line in raw.split("\n"):
+        if len(line) >= 3:
+            files.append({"status": line[:2].strip() or line[:2], "path": line[3:]})
+    return {"has_changes": bool(raw), "files": files}
 
 
 class CommitRequest(BaseModel):
@@ -250,6 +254,10 @@ async def git_commit(session_id: str, req: CommitRequest, branch: Optional[str] 
     if not container_id:
         raise HTTPException(status_code=404, detail="No container for this branch")
 
+    owner = session.get("github_username", "collide")
+    await exec_in_container(container_id, ["git", "config", "--global", "user.email", f"{owner}@collide"])
+    await exec_in_container(container_id, ["git", "config", "--global", "user.name", owner])
+
     await exec_in_container(container_id, ["git", "-C", "/app", "add", "-A"])
     exit_code, output = await exec_in_container(
         container_id,
@@ -259,4 +267,25 @@ async def git_commit(session_id: str, req: CommitRequest, branch: Optional[str] 
         error_msg = output.decode(errors="replace") if output else "unknown error"
         raise HTTPException(status_code=400, detail=f"Commit failed: {error_msg}")
 
+    return {"success": True}
+
+
+@router.post("/sessions/{session_id}/git/push")
+async def git_push(session_id: str, branch: Optional[str] = None):
+    session = await sessions_collection.find_one({"id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    container_id = _resolve_container(session, branch)
+    if not container_id:
+        raise HTTPException(status_code=404, detail="No container for this branch")
+
+    actual_branch = branch or session.get("default_branch", "main")
+    exit_code, output = await exec_in_container(
+        container_id,
+        ["git", "-C", "/app", "push", "--set-upstream", "origin", actual_branch],
+    )
+    if exit_code != 0:
+        error_msg = _strip_credentials(output.decode(errors="replace") if output else "unknown error")
+        raise HTTPException(status_code=400, detail=f"Push failed: {error_msg}")
     return {"success": True}
