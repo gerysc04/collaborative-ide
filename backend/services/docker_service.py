@@ -1,11 +1,16 @@
+import os
 import re
 import asyncio
+import logging
 import traceback
 import docker
 from fastapi import WebSocket
 from helpers.docker_helpers import exec_socket_in_container
 
+logger = logging.getLogger(__name__)
 client = docker.from_env()
+
+DEV_IMAGE = os.getenv("DEV_IMAGE", DEV_IMAGE)
 
 DB_IMAGES = {
     "postgresql": ("postgres:16-alpine", {"POSTGRES_PASSWORD": "collide", "POSTGRES_DB": "app", "POSTGRES_USER": "collide"}),
@@ -22,7 +27,7 @@ async def run_code(code: str) -> str:
     loop = asyncio.get_event_loop()
 
     result = await loop.run_in_executor(None, lambda: client.containers.run(
-        "collide-dev",
+        DEV_IMAGE,
         ["node", "-e", code],
         remove=True,
         mem_limit="128m",
@@ -41,9 +46,8 @@ def create_session_network(session_id: str) -> str:
 
 
 def create_container(session_id: str, network_name: str) -> str:
-    """Creates the initial container for a session (branch detected after clone)."""
     container = client.containers.create(
-        "collide-dev",
+        DEV_IMAGE,
         command="/bin/bash",
         stdin_open=True,
         tty=True,
@@ -66,10 +70,9 @@ def rename_container_for_branch(container_id: str, session_id: str, branch: str)
 
 
 def create_branch_container(session_id: str, branch: str, network_name: str) -> str:
-    """Creates a new container for a specific branch."""
     safe = _safe_branch(branch)
     container = client.containers.create(
-        "collide-dev",
+        DEV_IMAGE,
         command="/bin/bash",
         stdin_open=True,
         tty=True,
@@ -169,7 +172,7 @@ async def attach_terminal(websocket: WebSocket, container_id: str):
                     else:
                         await asyncio.sleep(0.01)
                 except Exception as e:
-                    print(f"read error: {e}")
+                    logger.error(f"read error: {e}")
                     break
 
         async def write_to_container():
@@ -184,11 +187,11 @@ async def attach_terminal(websocket: WebSocket, container_id: str):
                         break
                     await loop.run_in_executor(None, sock._sock.sendall, data)
                 except Exception as e:
-                    print(f"write error: {e}")
+                    logger.error(f"write error: {e}")
                     break
 
         await asyncio.gather(read_from_container(), write_to_container())
 
-    except Exception as e:
-        print(f"attach_terminal error: {traceback.format_exc()}")
+    except Exception:
+        logger.error(f"attach_terminal error: {traceback.format_exc()}")
         await websocket.close()

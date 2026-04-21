@@ -1,10 +1,11 @@
 import asyncio
 import logging
+import os
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
-INACTIVITY_TIMEOUT = 600  # 10 minutes
+INACTIVITY_TIMEOUT = int(os.getenv("INACTIVITY_TIMEOUT_SECONDS", "600"))
 
 _active_connections: dict[str, set] = defaultdict(set)
 _inactivity_timers: dict[str, asyncio.TimerHandle] = {}

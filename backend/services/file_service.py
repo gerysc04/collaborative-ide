@@ -1,6 +1,9 @@
 import asyncio
+import logging
 import traceback
 from fastapi import WebSocket
+
+logger = logging.getLogger(__name__)
 from helpers.docker_helpers import exec_in_container, exec_socket_in_container
 
 _PRUNE_DIRS = [
@@ -105,9 +108,9 @@ async def watch_files(websocket: WebSocket, container_id: str):
                 else:
                     await asyncio.sleep(0.1)
             except Exception as e:
-                print(f"watch error: {e}")
+                logger.error(f"watch error: {e}")
                 break
 
-    except Exception as e:
-        print(f"watch_files error: {traceback.format_exc()}")
+    except Exception:
+        logger.error(f"watch_files error: {traceback.format_exc()}")
         await websocket.close()
