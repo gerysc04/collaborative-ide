@@ -71,8 +71,13 @@ class SubdomainProxyMiddleware:
         session = await sessions_collection.find_one({"id": {"$regex": f"^{short_id}"}})
         if not session:
             raise ValueError("Session not found")
+        containers = session.get("containers", {})
+        default_branch = session.get("default_branch", "main")
+        container_id = containers.get(default_branch) or session.get("container_id")
+        if not container_id:
+            raise ValueError("No container found")
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _get_container_ip, session["container_id"])
+        return await loop.run_in_executor(None, _get_container_ip, container_id)
 
     async def _proxy_http(self, scope, receive, send, session_id: str, port: int):
         try:
