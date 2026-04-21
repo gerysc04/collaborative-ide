@@ -99,7 +99,9 @@ async def upload_file(
     if not container_id:
         return JSONResponse(status_code=404, content={"error": "No container for this branch"})
 
-    content_bytes = await file.read()
+    content_bytes = await file.read(10 * 1024 * 1024 + 1)
+    if len(content_bytes) > 10 * 1024 * 1024:
+        return JSONResponse(status_code=413, content={"error": "File exceeds 10MB limit"})
     encoded = base64.b64encode(content_bytes).decode("ascii")
     parent = str(PurePosixPath(path).parent)
     await exec_in_container(container_id, ["mkdir", "-p", parent])

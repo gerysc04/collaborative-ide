@@ -139,8 +139,13 @@ def _make_tool_fns(container_id: str) -> dict:
 
     async def run_command(command: str) -> str:
         try:
-            _, output = await exec_in_container(container_id, ["sh", "-c", command])
+            _, output = await asyncio.wait_for(
+                exec_in_container(container_id, ["sh", "-c", command]),
+                timeout=30.0,
+            )
             return (output.decode("utf-8", errors="replace") if output else "")[:4000]
+        except asyncio.TimeoutError:
+            return "Error: command timed out after 30 seconds"
         except Exception as e:
             return f"Error: {e}"
 

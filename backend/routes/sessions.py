@@ -1,4 +1,5 @@
 import asyncio
+import re
 import docker
 from typing import Optional
 from fastapi import APIRouter, HTTPException
@@ -28,6 +29,10 @@ class CreateBranchRequest(BaseModel):
     branch_name: str
     is_new: bool = False
     github_token: str
+
+
+def _strip_credentials(text: str) -> str:
+    return re.sub(r'https://[^@\s]+@', 'https://', text)
 
 
 def _resolve_container(session: dict, branch: Optional[str]) -> Optional[str]:
@@ -93,7 +98,7 @@ async def create_session(req: CreateSessionRequest):
             await loop.run_in_executor(None, lambda: docker_client.networks.get(network_name).remove())
         except Exception:
             pass
-        error_msg = output.decode(errors="replace") if output else "unknown error"
+        error_msg = _strip_credentials(output.decode(errors="replace") if output else "unknown error")
         raise HTTPException(status_code=400, detail=f"Failed to clone repository: {error_msg}")
 
     # Detect the actual default branch
@@ -200,7 +205,7 @@ async def create_branch(session_id: str, req: CreateBranchRequest):
     exit_code, output = await exec_in_container(container_id, ["git", "clone", clone_url, "/app"])
     if exit_code != 0:
         await loop.run_in_executor(None, lambda: docker_client.containers.get(container_id).remove(force=True))
-        error_msg = output.decode(errors="replace") if output else "unknown error"
+        error_msg = _strip_credentials(output.decode(errors="replace") if output else "unknown error")
         raise HTTPException(status_code=400, detail=f"Failed to clone: {error_msg}")
 
     if req.is_new:
