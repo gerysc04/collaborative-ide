@@ -10,7 +10,7 @@ from helpers.docker_helpers import exec_socket_in_container
 logger = logging.getLogger(__name__)
 client = docker.from_env()
 
-DEV_IMAGE = os.getenv("DEV_IMAGE", DEV_IMAGE)
+DEV_IMAGE = os.getenv("DEV_IMAGE", "collide-dev")
 
 DB_IMAGES = {
     "postgresql": ("postgres:16-alpine", {"POSTGRES_PASSWORD": "collide", "POSTGRES_DB": "app", "POSTGRES_USER": "collide"}),
