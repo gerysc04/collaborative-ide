@@ -2,8 +2,6 @@
 
 A browser-based collaborative cloud IDE. Multiple developers share a URL and get a live coding environment with a real terminal, real file system, and real code execution inside an isolated Docker container — no setup required.
 
-> Think self-hosted Replit / Gitpod.
-
 ---
 
 ## Features
