@@ -1,5 +1,7 @@
 import asyncio
 import re
+import random
+import string
 import docker
 from typing import Optional
 from fastapi import APIRouter, HTTPException
@@ -8,7 +10,7 @@ from models.session import Session
 from services.mongo_service import sessions_collection
 from services.docker_service import (
     create_session_network, create_container, rename_container_for_branch,
-    create_branch_container, create_db_container, DB_IMAGES
+    create_branch_container, create_db_container, create_guest_container, DB_IMAGES
 )
 from services.session_lifecycle import restore_session
 from helpers.docker_helpers import exec_in_container
@@ -115,6 +117,57 @@ async def create_session(req: CreateSessionRequest):
 
     await sessions_collection.insert_one(session.model_dump())
     return {"session_id": session.id}
+
+
+@router.post("/sessions/guest")
+async def create_guest_session():
+    suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    username = f"guest_{suffix}"
+
+    session = Session(
+        name="SpendData",
+        owner=username,
+        github_username=username,
+        db_type="mongodb",
+        default_branch="main",
+        is_guest=True,
+    )
+
+    loop = asyncio.get_event_loop()
+
+    network_name = await loop.run_in_executor(None, create_session_network, session.id)
+    session.network_name = network_name
+
+    try:
+        db_container_id = await loop.run_in_executor(
+            None, create_db_container, session.id, "mongodb", network_name
+        )
+        session.db_container_id = db_container_id
+    except Exception as e:
+        try:
+            await loop.run_in_executor(None, lambda: docker_client.networks.get(network_name).remove())
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Failed to start database container: {e}")
+
+    try:
+        container_id = await loop.run_in_executor(None, create_guest_container, session.id, network_name)
+    except Exception as e:
+        await loop.run_in_executor(None, lambda: docker_client.containers.get(db_container_id).remove(force=True))
+        try:
+            await loop.run_in_executor(None, lambda: docker_client.networks.get(network_name).remove())
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Failed to start guest container: {e}")
+
+    session.containers = {"main": container_id}
+
+    await sessions_collection.insert_one(session.model_dump())
+
+    # Seed sample data in the background — runs while the user navigates to the session
+    asyncio.create_task(exec_in_container(container_id, ["node", "/app/seed.js"]))
+
+    return {"session_id": session.id, "username": username}
 
 
 @router.get("/sessions/{session_id}")

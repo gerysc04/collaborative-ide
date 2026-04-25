@@ -22,3 +22,4 @@ class Session(BaseModel):
     ports: list[dict] = []
     ai_providers: list[dict] = []  # {tag, provider, display_name, key_ciphertext, key_iv}
     run_configs: list[dict] = []   # {id, name, command}
+    is_guest: bool = False

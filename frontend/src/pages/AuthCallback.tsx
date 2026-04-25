@@ -12,7 +12,7 @@ export default function AuthCallback() {
     if (token) sessionStorage.setItem('github_token', token)
     if (username) sessionStorage.setItem('username', username)
 
-    navigate('/', { replace: true })
+    navigate('/app', { replace: true })
   }, [navigate])
 
   return null

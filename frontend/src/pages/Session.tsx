@@ -49,6 +49,8 @@ export default function Session() {
   const [showGit, setShowGit] = useState(false)
   const [pendingRun, setPendingRun] = useState<{ command: string; ts: number } | null>(null)
   const [isResuming, setIsResuming] = useState(false)
+  const [isGuest, setIsGuest] = useState(location.state?.is_guest === true)
+  const [showGuestHint, setShowGuestHint] = useState(true)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
   const [chatCollapsed, setChatCollapsed] = useState(false)
   const fileTreePanelRef = useRef<ImperativePanelHandle>(null)
@@ -73,6 +75,8 @@ export default function Session() {
           const parts = data.repo_url.replace('.git', '').split('/')
           setRepoName(parts.slice(-2).join('/'))
         }
+        if (data.is_guest) setIsGuest(true)
+
         const branch = data.default_branch || 'main'
         setCurrentBranch(branch)
         currentBranchRef.current = branch
@@ -294,6 +298,29 @@ export default function Session() {
           <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.72rem' }}>
             restoring containers from snapshot
           </span>
+        </div>
+      )}
+
+      {isGuest && showGuestHint && (
+        <div style={{
+          position: 'fixed', bottom: '1.25rem', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 900, background: 'var(--bg-elevated)', border: '1px solid var(--accent)',
+          padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem',
+          fontFamily: 'var(--font-mono)', fontSize: '0.78rem', maxWidth: '90vw',
+        }}>
+          <span>
+            <span style={{ color: 'var(--accent)' }}>Your demo environment is ready.</span>
+            {' '}Run <code style={{ background: 'var(--bg)', padding: '0 4px' }}>npm run dev</code> in the terminal,
+            then open the <strong>Ports</strong> panel and forward port <strong>3000</strong> to see the project live.
+          </span>
+          <button
+            onClick={() => setShowGuestHint(false)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', fontSize: '0.9rem', flexShrink: 0, padding: 0,
+            }}
+            aria-label="Dismiss"
+          >×</button>
         </div>
       )}
 

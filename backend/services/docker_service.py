@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 client = docker.from_env()
 
 DEV_IMAGE = os.getenv("DEV_IMAGE", "collide-dev")
+DEMO_IMAGE = os.getenv("DEMO_IMAGE", "collide-spenddata-demo")
 
 DB_IMAGES = {
     "postgresql": ("postgres:16-alpine", {"POSTGRES_PASSWORD": "collide", "POSTGRES_DB": "app", "POSTGRES_USER": "collide"}),
@@ -60,6 +61,23 @@ def create_container(session_id: str, network_name: str) -> str:
     )
     container.start()
     container.exec_run(["mkdir", "-p", "/app"])
+    return container.id
+
+
+def create_guest_container(session_id: str, network_name: str) -> str:
+    container = client.containers.create(
+        DEMO_IMAGE,
+        command="/bin/bash",
+        stdin_open=True,
+        tty=True,
+        mem_limit="1g",
+        cpu_period=100000,
+        cpu_quota=200000,
+        name=f"collide-{session_id}-main",
+        network=network_name,
+        labels={"collide_session": session_id, "collide_role": "app", "collide_branch": "main"}
+    )
+    container.start()
     return container.id
 
 
