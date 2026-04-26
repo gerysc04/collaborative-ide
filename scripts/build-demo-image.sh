@@ -18,6 +18,9 @@ docker exec "$CONTAINER" git clone https://github.com/gerysc04/SpendData /app
 echo "==> Installing dependencies (this may take a minute)..."
 docker exec "$CONTAINER" sh -c "cd /app && npm install"
 
+echo "==> Building Next.js production bundle..."
+docker exec "$CONTAINER" sh -c "cd /app && npm run build"
+
 echo "==> Writing .env.local..."
 docker exec "$CONTAINER" sh -c "echo 'MONGODB_URI=mongodb://db:27017/spenddata' > /app/.env.local"
 

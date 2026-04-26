@@ -310,7 +310,7 @@ export default function Session() {
         }}>
           <span>
             <span style={{ color: 'var(--accent)' }}>Your demo environment is ready.</span>
-            {' '}Run <code style={{ background: 'var(--bg)', padding: '0 4px' }}>npm run dev</code> in the terminal,
+            {' '}Run <code style={{ background: 'var(--bg)', padding: '0 4px' }}>npm start</code> in the terminal,
             then open the <strong>Ports</strong> panel and forward port <strong>3000</strong> to see the project live.
           </span>
           <button
