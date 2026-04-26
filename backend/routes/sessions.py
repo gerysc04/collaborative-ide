@@ -2,7 +2,10 @@ import asyncio
 import re
 import random
 import string
+import logging
 import docker
+
+logger = logging.getLogger(__name__)
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -164,8 +167,14 @@ async def create_guest_session():
 
     await sessions_collection.insert_one(session.model_dump())
 
-    # Seed sample data in the background — runs while the user navigates to the session
-    asyncio.create_task(exec_in_container(container_id, ["node", "/app/seed.js"]))
+    async def _seed():
+        exit_code, output = await exec_in_container(container_id, ["node", "/app/seed.cjs"])
+        if exit_code != 0:
+            logger.error("guest seed failed: %s", output.decode(errors="replace"))
+        else:
+            logger.info("guest seed complete")
+
+    asyncio.create_task(_seed())
 
     return {"session_id": session.id, "username": username}
 

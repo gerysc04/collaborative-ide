@@ -52,7 +52,7 @@ export default function Session() {
   const [isGuest, setIsGuest] = useState(location.state?.is_guest === true)
   const [showGuestHint, setShowGuestHint] = useState(true)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
-  const [chatCollapsed, setChatCollapsed] = useState(false)
+  const [chatCollapsed, setChatCollapsed] = useState(true)
   const fileTreePanelRef = useRef<ImperativePanelHandle>(null)
   const chatPanelRef = useRef<ImperativePanelHandle>(null)
 
@@ -382,7 +382,7 @@ export default function Session() {
             </button>
           </PanelResizeHandle>
 
-          <Panel ref={chatPanelRef} defaultSize={25} minSize={20} maxSize={35} collapsible collapsedSize={0} onCollapse={() => setChatCollapsed(true)} onExpand={() => setChatCollapsed(false)}>
+          <Panel ref={chatPanelRef} defaultSize={0} minSize={20} maxSize={35} collapsible collapsedSize={0} onCollapse={() => setChatCollapsed(true)} onExpand={() => setChatCollapsed(false)}>
             <Chat sessionId={sessionId} username={username} currentBranch={currentBranch} isCollapsed={chatCollapsed} onToggle={toggleChat} />
           </Panel>
         </PanelGroup>

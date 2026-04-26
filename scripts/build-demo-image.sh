@@ -22,7 +22,7 @@ echo "==> Writing .env.local..."
 docker exec "$CONTAINER" sh -c "echo 'MONGODB_URI=mongodb://db:27017/spenddata' > /app/.env.local"
 
 echo "==> Copying seed script..."
-docker cp "$(dirname "$0")/seed.js" "$CONTAINER:/app/seed.js"
+docker cp "$(dirname "$0")/seed.cjs" "$CONTAINER:/app/seed.cjs"
 
 echo "==> Committing image as $IMAGE..."
 docker commit "$CONTAINER" "$IMAGE"
