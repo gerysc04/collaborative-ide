@@ -393,6 +393,72 @@
   line-height: 1.7;
 }
 
+/* ── Deep features ── */
+.landing__deep {
+  padding: 5rem 2rem;
+  background: var(--bg);
+  border-top: 1px solid var(--bg-border);
+}
+
+.landing__deep-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.landing__deep-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 1.5rem;
+}
+
+.landing__deep-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--bg-border);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.landing__deep-tag {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.landing__deep-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.landing__deep-desc {
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  flex: 1;
+}
+
+.landing__deep-snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--bg);
+  border: 1px solid var(--bg-border);
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.landing__deep-line {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  white-space: pre;
+}
+.landing__deep-line:first-child { color: var(--accent); }
+
 /* ── Checklist ── */
 .landing__checklist-section {
   padding: 5rem 2rem;

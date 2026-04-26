@@ -47,6 +47,33 @@ const CHECKLIST = [
   'GitHub integration — import any repo at session creation',
 ]
 
+const DEEP_FEATURES = [
+  {
+    tag: 'Branches',
+    title: 'One container per branch',
+    desc: 'Switch git branches without killing your running server. Each branch spins up in its own isolated container — same network, shared database. Work on a feature branch and main simultaneously, each with its own shell, its own process, its own state.',
+    snippet: ['$ git checkout -b feature/auth', '→ new container: collide-abc123-feature-auth', '→ db still reachable at hostname db'],
+  },
+  {
+    tag: 'Database',
+    title: 'Database included, zero config',
+    desc: "Pick Postgres, MongoDB, or Redis when you create the session. A dedicated container starts on the same Docker network, reachable at hostname db. Connect from the terminal instantly, or spin up a web UI inside the container and port-forward it for a full graphical interface in the browser.",
+    snippet: ['$ mongosh mongodb://db:27017/app', '$ psql -h db -U collide -d app', '$ redis-cli -h db'],
+  },
+  {
+    tag: 'Persistence',
+    title: "Sessions don't disappear",
+    desc: "Close the tab. Shut the laptop. After 10 minutes of inactivity, every container is snapshotted and paused. Come back tomorrow, click resume, and pick up exactly where you left off — running processes, open files, terminal history and all.",
+    snippet: ['session paused → snapshot saved', 'rejoining...', 'session restored in 4s ✓'],
+  },
+  {
+    tag: 'AI',
+    title: 'An agent that can actually do things',
+    desc: 'The AI agent is not a chat window. Type @anthropic fix the auth bug in the shared chat and it reads your files, edits code, and runs commands inside the container — all streamed live so everyone in the session sees what it\'s doing.',
+    snippet: ['@anthropic refactor api/users.js', '→ read_file api/users.js', '→ write_file api/users.js', '→ run_command npm test'],
+  },
+]
+
 const FAQ = [
   {
     q: 'Is it free?',
@@ -207,6 +234,26 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="landing__deep">
+        <div className="landing__deep-inner">
+          <h2 className="landing__section-title">What sets it apart</h2>
+          <div className="landing__deep-grid">
+            {DEEP_FEATURES.map((f) => (
+              <div key={f.tag} className="landing__deep-card">
+                <span className="landing__deep-tag">{f.tag}</span>
+                <h3 className="landing__deep-title">{f.title}</h3>
+                <p className="landing__deep-desc">{f.desc}</p>
+                <div className="landing__deep-snippet">
+                  {f.snippet.map((line, i) => (
+                    <span key={i} className="landing__deep-line">{line}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="landing__checklist-section">
         <h2 className="landing__section-title">What's included</h2>
         <ul className="landing__checklist">
@@ -258,7 +305,7 @@ export default function Landing() {
       <footer className="landing__footer">
         <span className="landing__logo">Collide</span>
         <a
-          href="https://github.com/gerysc04"
+          href="https://github.com/gerysc04/collaborative-ide"
           target="_blank"
           rel="noreferrer"
           className="landing__footer-link"

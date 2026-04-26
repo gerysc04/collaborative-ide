@@ -17,6 +17,7 @@ interface PaneProps {
 function TerminalPane({ sessionId, currentBranch, active, sharedName, autoRun }: PaneProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -38,6 +39,25 @@ function TerminalPane({ sessionId, currentBranch, active, sharedName, autoRun }:
     term.loadAddon(fitAddon)
     term.open(containerRef.current)
     fitAddon.fit()
+
+    const handleMouseUp = () => {
+      const sel = term.getSelection()
+      if (!sel) return
+      const doCopy = () => { setCopied(true); setTimeout(() => setCopied(false), 1500) }
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(sel).then(doCopy).catch(() => {})
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = sel
+        ta.style.cssText = 'position:fixed;opacity:0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        doCopy()
+      }
+    }
+    term.element?.addEventListener('mouseup', handleMouseUp)
 
     const wsUrl = sharedName
       ? `${API_WS_URL}/ws/terminal/${sessionId}/shared/${encodeURIComponent(sharedName)}?branch=${encodeURIComponent(currentBranch)}`
@@ -78,17 +98,28 @@ function TerminalPane({ sessionId, currentBranch, active, sharedName, autoRun }:
   }, [active])
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        height: '100%',
-        width: '100%',
-        padding: '0.25rem',
-        boxSizing: 'border-box',
-        background: '#111111',
-        display: active ? 'block' : 'none',
-      }}
-    />
+    <div style={{ height: '100%', width: '100%', position: 'relative', display: active ? 'block' : 'none' }}>
+      <div
+        ref={containerRef}
+        style={{
+          height: '100%',
+          width: '100%',
+          padding: '0.25rem',
+          boxSizing: 'border-box',
+          background: '#111111',
+        }}
+      />
+      {copied && (
+        <div style={{
+          position: 'absolute', bottom: '0.5rem', right: '0.75rem',
+          background: 'var(--bg-elevated)', border: '1px solid var(--accent)',
+          color: 'var(--accent)', fontFamily: 'var(--font-mono)',
+          fontSize: '0.7rem', padding: '0.25rem 0.6rem', pointerEvents: 'none',
+        }}>
+          copied
+        </div>
+      )}
+    </div>
   )
 }
 

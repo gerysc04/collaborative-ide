@@ -16,6 +16,7 @@ import FilePalette from '../components/FilePalette'
 import RunPanel from '../components/RunPanel'
 import GitPanel from '../components/GitPanel'
 import ResourceUsage from '../components/ResourceUsage'
+import TutorialOverlay from '../components/TutorialOverlay'
 import { API_URL } from '../config'
 import '../styles/Session.css'
 
@@ -51,6 +52,7 @@ export default function Session() {
   const [isResuming, setIsResuming] = useState(false)
   const [isGuest, setIsGuest] = useState(location.state?.is_guest === true)
   const [showGuestHint, setShowGuestHint] = useState(true)
+  const [tutorialForced, setTutorialForced] = useState(false)
   const [fileTreeCollapsed, setFileTreeCollapsed] = useState(false)
   const [chatCollapsed, setChatCollapsed] = useState(true)
   const fileTreePanelRef = useRef<ImperativePanelHandle>(null)
@@ -229,28 +231,39 @@ export default function Session() {
             session code: <span className="session__code-value">{codeCopied ? 'copied!' : sessionId}</span>
           </span>
           <button
+            data-tutorial="btn-git"
             className={`session__btn session__btn--ports${showGit ? ' session__btn--ports-active' : ''}`}
             onClick={() => { setShowGit(p => !p); setShowRun(false); setShowPorts(false); setShowProviders(false) }}
           >
             Git
           </button>
           <button
+            data-tutorial="btn-run"
             className={`session__btn session__btn--ports${showRun ? ' session__btn--ports-active' : ''}`}
             onClick={() => { setShowRun(p => !p); setShowPorts(false); setShowProviders(false); setShowGit(false) }}
           >
             ▶ Run
           </button>
           <button
+            data-tutorial="btn-ai"
             className={`session__btn session__btn--ports${showProviders ? ' session__btn--ports-active' : ''}`}
             onClick={() => { setShowProviders(p => !p); setShowPorts(false); setShowRun(false); setShowGit(false) }}
           >
             AI
           </button>
           <button
+            data-tutorial="btn-ports"
             className={`session__btn session__btn--ports${showPorts ? ' session__btn--ports-active' : ''}`}
             onClick={() => { setShowPorts(p => !p); setShowProviders(false); setShowRun(false); setShowGit(false) }}
           >
             Ports
+          </button>
+          <button
+            className="session__btn"
+            onClick={() => setTutorialForced(true)}
+            title="Show tutorial"
+          >
+            ?
           </button>
         </div>
       </div>
@@ -328,14 +341,16 @@ export default function Session() {
       <div className="session__body">
         <PanelGroup direction="horizontal" style={{ height: '100%' }}>
           <Panel ref={fileTreePanelRef} defaultSize={20} minSize={15} maxSize={30} collapsible collapsedSize={0} onCollapse={() => setFileTreeCollapsed(true)} onExpand={() => setFileTreeCollapsed(false)}>
-            <FileTree
-              sessionId={sessionId}
-              currentBranch={currentBranch}
-              onFileSelect={handleFileSelect}
-              selectedFile={activeFile ?? undefined}
-              isCollapsed={fileTreeCollapsed}
-              onToggle={toggleFileTree}
-            />
+            <div data-tutorial="file-tree" style={{ height: '100%' }}>
+              <FileTree
+                sessionId={sessionId}
+                currentBranch={currentBranch}
+                onFileSelect={handleFileSelect}
+                selectedFile={activeFile ?? undefined}
+                isCollapsed={fileTreeCollapsed}
+                onToggle={toggleFileTree}
+              />
+            </div>
           </Panel>
 
           <PanelResizeHandle className="resize-handle resize-handle--vertical">
@@ -358,16 +373,20 @@ export default function Session() {
               />
               <PanelGroup direction="vertical" style={{ flex: 1, minHeight: 0 }}>
                 <Panel defaultSize={65} minSize={30}>
-                  <CodeEditor onMount={handleEditorMountWithSave} />
+                  <div data-tutorial="editor" style={{ height: '100%' }}>
+                    <CodeEditor onMount={handleEditorMountWithSave} />
+                  </div>
                 </Panel>
                 <PanelResizeHandle className="resize-handle resize-handle--horizontal" />
                 <Panel defaultSize={35} minSize={15}>
-                  <TerminalPanel
-                    key={currentBranch}
-                    sessionId={sessionId}
-                    currentBranch={currentBranch}
-                    pendingRun={pendingRun}
-                  />
+                  <div data-tutorial="terminal" style={{ height: '100%' }}>
+                    <TerminalPanel
+                      key={currentBranch}
+                      sessionId={sessionId}
+                      currentBranch={currentBranch}
+                      pendingRun={pendingRun}
+                    />
+                  </div>
                 </Panel>
               </PanelGroup>
             </div>
@@ -375,6 +394,7 @@ export default function Session() {
 
           <PanelResizeHandle className="resize-handle resize-handle--vertical">
             <button
+              data-tutorial="btn-chat"
               onClick={(e) => { e.stopPropagation(); toggleChat() }}
               title={chatCollapsed ? 'Open chat' : 'Close chat'}
               className="panel-bookmark panel-bookmark--right"
@@ -389,6 +409,11 @@ export default function Session() {
         </PanelGroup>
       </div>
 
+      <TutorialOverlay
+        username={username}
+        forceOpen={tutorialForced}
+        onClose={() => setTutorialForced(false)}
+      />
     </div>
   )
 }
